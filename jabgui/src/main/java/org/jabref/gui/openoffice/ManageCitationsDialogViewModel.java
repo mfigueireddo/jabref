@@ -16,13 +16,15 @@ public class ManageCitationsDialogViewModel {
     public final boolean failedToGetCitationEntries;
     private final ListProperty<CitationEntryViewModel> citations = new SimpleListProperty<>(FXCollections.observableArrayList());
     private final OOBibBase ooBase;
+    private final OOBibBaseGUI ooBaseGUI;
     private final DialogService dialogService;
 
     public ManageCitationsDialogViewModel(OOBibBase ooBase, DialogService dialogService) {
         this.ooBase = ooBase;
+        this.ooBaseGUI = ooBase.getGUI();
         this.dialogService = dialogService;
 
-        Optional<List<CitationEntry>> citationEntries = ooBase.guiActionGetCitationEntries();
+        Optional<List<CitationEntry>> citationEntries = ooBaseGUI.getCitationEntries();
         this.failedToGetCitationEntries = citationEntries.isEmpty();
         if (citationEntries.isEmpty()) {
             return;
@@ -36,7 +38,7 @@ public class ManageCitationsDialogViewModel {
 
     public void storeSettings() {
         List<CitationEntry> citationEntries = citations.stream().map(CitationEntryViewModel::toCitationEntry).collect(Collectors.toList());
-        ooBase.guiActionApplyCitationEntries(citationEntries);
+        ooBaseGUI.applyCitationEntries(citationEntries);
     }
 
     public ListProperty<CitationEntryViewModel> citationsProperty() {

@@ -111,6 +111,7 @@ public class OpenOfficePanel {
     private final FileUpdateMonitor fileUpdateMonitor;
     private final BibEntryTypesManager entryTypesManager;
     private OOBibBase ooBase;
+    private OOBibBaseGUI ooBaseGUI;
     private OOStyle currentStyle;
 
     private final SimpleObjectProperty<OOStyle> currentStyleProperty;
@@ -273,16 +274,16 @@ public class OpenOfficePanel {
                 return;
             }
             List<BibDatabase> databases = getBaseList();
-            ooBase.guiActionUpdateDocument(databases, currentStyle);
+            ooBaseGUI.updateDocument(databases, currentStyle);
         });
 
         merge.setMaxWidth(Double.MAX_VALUE);
         merge.setTooltip(new Tooltip(Localization.lang("Combine pairs of citations that are separated by spaces only")));
-        merge.setOnAction(_ -> ooBase.guiActionMergeCitationGroups(getBaseList(), currentStyle));
+        merge.setOnAction(_ -> ooBaseGUI.mergeCitationGroups(getBaseList(), currentStyle));
 
         unmerge.setMaxWidth(Double.MAX_VALUE);
         unmerge.setTooltip(new Tooltip(Localization.lang("Separate merged citations")));
-        unmerge.setOnAction(_ -> ooBase.guiActionSeparateCitations(getBaseList(), currentStyle));
+        unmerge.setOnAction(_ -> ooBaseGUI.separateCitations(getBaseList(), currentStyle));
 
         ContextMenu settingsMenu = createSettingsPopup();
         settingsB.setMaxWidth(Double.MAX_VALUE);
@@ -329,7 +330,7 @@ public class OpenOfficePanel {
     private void exportEntries() {
         List<BibDatabase> databases = getBaseList();
         boolean returnPartialResult = false;
-        Optional<BibDatabase> newDatabase = ooBase.exportCitedHelper(databases, returnPartialResult);
+        Optional<BibDatabase> newDatabase = ooBaseGUI.exportCitedHelper(databases, returnPartialResult);
         if (newDatabase.isPresent()) {
             BibDatabaseContext databaseContext = new BibDatabaseContext(newDatabase.get());
             LibraryTab libraryTab = LibraryTab.createLibraryTab(
@@ -420,7 +421,7 @@ public class OpenOfficePanel {
     }
 
     private void updateButtonAvailability() {
-        boolean isConnectedToDocument = ooBase != null && !ooBase.isDocumentConnectionMissing();
+        boolean isConnectedToDocument = ooBase != null && ooBaseGUI != null && !ooBase.isDocumentConnectionMissing();
         boolean hasStyle = currentStyle != null;
         boolean hasDatabase = !getBaseList().isEmpty();
         boolean canCite = isConnectedToDocument && hasStyle && hasDatabase;
@@ -461,6 +462,7 @@ public class OpenOfficePanel {
 
         connectTask.setOnSucceeded(_ -> {
             ooBase = connectTask.getValue();
+            ooBaseGUI = ooBase.getGUI();
 
             try {
                 ooBase.guiActionSelectDocument(true);
@@ -584,7 +586,7 @@ public class OpenOfficePanel {
         if (syncOptions.isPresent() && openOfficePreferences.getSyncWhenCiting()) {
             syncOptions.get().setUpdateBibliography(true);
         }
-        ooBase.guiActionInsertEntry(entries,
+        ooBaseGUI.insertEntry(entries,
                 bibDatabaseContext,
                 entryTypesManager,
                 currentStyle,

@@ -33,13 +33,9 @@ public class OOBibBaseGUI {
 
     private final DialogService dialogService;
 
-    public OOBibBaseGUI(Path loPath, DialogService dialogService, OpenOfficePreferences openOfficePreferences)
-            throws
-            BootstrapException,
-            CreationException, IOException, InterruptedException {
-
+    public OOBibBaseGUI(OOBibBase logic, DialogService dialogService){
+        this.logic = logic;
         this.dialogService = dialogService;
-        this.logic = new OOBibBase(loPath, dialogService, openOfficePreferences);
     }
 
     void showDialog(OOError err) {

@@ -74,6 +74,8 @@ public class OOBibBase {
     private CSLCitationOOAdapter cslCitationOOAdapter;
     private CSLUpdateBibliography cslUpdateBibliography;
 
+    private final OOBibBaseGUI gui;
+
     public OOBibBase(Path loPath, DialogService dialogService, OpenOfficePreferences openOfficePreferences)
             throws
             BootstrapException,
@@ -82,6 +84,11 @@ public class OOBibBase {
         this.dialogService = dialogService;
         this.connection = new OOBibBaseConnect(loPath, dialogService);
         this.openOfficePreferences = openOfficePreferences;
+        this.gui = new OOBibBaseGUI(this, dialogService);
+    }
+
+    public OOBibBaseGUI getGUI(){
+        return this.gui;
     }
 
     private void initializeCitationAdapter(XTextDocument doc) throws WrappedTargetException, NoSuchElementException {
