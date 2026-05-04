@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -297,19 +298,10 @@ public class OOBibBase {
         }
     }
 
-    OOVoidResult<OOError> databaseIsRequired(List<BibDatabase> databases,
-                                             Supplier<OOError> fun) {
-        if (databases == null || databases.isEmpty()) {
-            return OOVoidResult.error(fun.get());
-        } else {
-            return OOVoidResult.ok();
-        }
-    }
-
-    OOVoidResult<OOError> selectedBibEntryIsRequired(List<BibEntry> entries,
-                                                     Supplier<OOError> fun) {
-        if (entries == null || entries.isEmpty()) {
-            return OOVoidResult.error(fun.get());
+    <T> OOVoidResult<OOError> collectionIsRequired(Collection<T> collection,
+                                                   Supplier<OOError> errorSupplier) {
+        if (collection == null || collection.isEmpty()) {
+            return OOVoidResult.error(errorSupplier.get());
         } else {
             return OOVoidResult.ok();
         }
@@ -509,7 +501,7 @@ public class OOBibBase {
         OOVoidResult<OOError> preconditions = collectResults("",
                 List.of(
                         styleIsRequired(style),
-                        selectedBibEntryIsRequired(entries, OOError::noEntriesSelectedForCitation)
+                        collectionIsRequired(entries, OOError::noEntriesSelectedForCitation)
                 ));
         if (preconditions.isError()) {
             return preconditions;
@@ -551,7 +543,7 @@ public class OOBibBase {
             if (fcursor.isError()) {
                 return fcursor.asVoidResult();
             }
-            OOVoidResult<OOError> dbCheck = databaseIsRequired(syncOptions.get().databases,
+            OOVoidResult<OOError> dbCheck = collectionIsRequired(syncOptions.get().databases,
                     OOError::noDataBaseIsOpenForSyncingAfterCitation);
             if (dbCheck.isError()) {
                 return dbCheck;
@@ -705,7 +697,7 @@ public class OOBibBase {
         OOVoidResult<OOError> preconditions = collectResults("",
                 List.of(
                         styleIsRequired(jStyle),
-                        databaseIsRequired(databases, OOError::noDataBaseIsOpen)
+                        collectionIsRequired(databases, OOError::noDataBaseIsOpen)
                 ));
         if (preconditions.isError()) {
             return preconditions;
@@ -773,7 +765,7 @@ public class OOBibBase {
         OOVoidResult<OOError> preconditions = collectResults("",
                 List.of(
                         styleIsRequired(jStyle),
-                        databaseIsRequired(databases, OOError::noDataBaseIsOpen)
+                        collectionIsRequired(databases, OOError::noDataBaseIsOpen)
                 ));
         if (preconditions.isError()) {
             return preconditions;
@@ -842,7 +834,7 @@ public class OOBibBase {
             return OOResult.error(odoc.getError());
         }
 
-        OOVoidResult<OOError> dbCheck = databaseIsRequired(databases, OOError::noDataBaseIsOpenForExport);
+        OOVoidResult<OOError> dbCheck = collectionIsRequired(databases, OOError::noDataBaseIsOpenForExport);
         if (dbCheck.isError()) {
             return OOResult.error(dbCheck.getError());
         }
