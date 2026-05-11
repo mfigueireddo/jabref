@@ -110,7 +110,6 @@ public class OpenOfficePanel {
     private final LibraryTabContainer tabContainer;
     private final FileUpdateMonitor fileUpdateMonitor;
     private final BibEntryTypesManager entryTypesManager;
-    private OOBibBase ooBase;
     private OOBibBaseGUI ooBaseGUI;
     private OOStyle currentStyle;
 
@@ -223,7 +222,7 @@ public class OpenOfficePanel {
         selectDocument.setTooltip(new Tooltip(Localization.lang("Select which open Writer document to work on")));
         selectDocument.setOnAction(_ -> {
             try {
-                ooBase.guiActionSelectDocument(false);
+                ooBaseGUI.selectDocument(false);
             } catch (WrappedTargetException
                      | NoSuchElementException ex) {
                 LOGGER.warn("Unable to select document to work on", ex);
@@ -291,7 +290,7 @@ public class OpenOfficePanel {
         settingsB.setOnAction(_ -> settingsMenu.show(settingsB, Side.BOTTOM, 0, 0));
         manageCitations.setMaxWidth(Double.MAX_VALUE);
         manageCitations.setOnAction(_ -> {
-            ManageCitationsDialogView dialog = new ManageCitationsDialogView(ooBase);
+            ManageCitationsDialogView dialog = new ManageCitationsDialogView(ooBaseGUI);
             if (dialog.isOkToShowThisDialog()) {
                 dialogService.showCustomDialogAndWait(dialog);
             }
@@ -421,7 +420,7 @@ public class OpenOfficePanel {
     }
 
     private void updateButtonAvailability() {
-        boolean isConnectedToDocument = ooBase != null && ooBaseGUI != null && !ooBase.isDocumentConnectionMissing();
+        boolean isConnectedToDocument = ooBaseGUI != null && !ooBaseGUI.isDocumentConnectionMissing();
         boolean hasStyle = currentStyle != null;
         boolean hasDatabase = !getBaseList().isEmpty();
         boolean canCite = isConnectedToDocument && hasStyle && hasDatabase;
@@ -450,22 +449,21 @@ public class OpenOfficePanel {
         final String progressMessage = Localization.lang("Autodetecting paths...");
         final String loggerMessage = "Could not connect to running OpenOffice/LibreOffice";
 
-        Task<OOBibBase> connectTask = new Task<>() {
+        Task<OOBibBaseGUI> connectTask = new Task<>() {
             @Override
-            protected OOBibBase call() throws BootstrapException, CreationException, IOException, InterruptedException {
+            protected OOBibBaseGUI call() throws BootstrapException, CreationException, IOException, InterruptedException {
                 updateProgress(ProgressBar.INDETERMINATE_PROGRESS, ProgressBar.INDETERMINATE_PROGRESS);
 
                 Path path = Path.of(openOfficePreferences.getExecutablePath());
-                return createBibBase(path);
+                return new OOBibBaseGUI(path, dialogService, openOfficePreferences);
             }
         };
 
         connectTask.setOnSucceeded(_ -> {
-            ooBase = connectTask.getValue();
-            ooBaseGUI = ooBase.getGUI();
+            ooBaseGUI = connectTask.getValue();
 
             try {
-                ooBase.guiActionSelectDocument(true);
+                ooBaseGUI.selectDocument(true);
             } catch (WrappedTargetException
                      | NoSuchElementException e) {
                 LOGGER.warn("Unable to connect to document", e);
@@ -509,10 +507,6 @@ public class OpenOfficePanel {
 
         dialogService.showProgressDialog(progressMessage, progressMessage, connectTask);
         taskExecutor.execute(connectTask);
-    }
-
-    private OOBibBase createBibBase(Path loPath) throws BootstrapException, CreationException, IOException, InterruptedException {
-        return new OOBibBase(loPath, dialogService, openOfficePreferences);
     }
 
     /// Given the withText and inParenthesis options, return the corresponding citationType.
