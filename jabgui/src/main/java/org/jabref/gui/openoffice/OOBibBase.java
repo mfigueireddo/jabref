@@ -3,7 +3,6 @@ package org.jabref.gui.openoffice;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -66,7 +65,38 @@ public class OOBibBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OOBibBase.class);
 
-    private final DialogService dialogService;
+    /// Result type for CSL bibliography update operations
+    public enum CSLUpdateResult {
+        SUCCESS,
+        NO_CITED_ENTRIES,
+        ERROR
+    }
+
+    /// Result for updateDocument operation that can contain CSL-specific outcomes
+    public record UpdateDocumentResult(
+            OOVoidResult<OOError> result,
+            Optional<CSLUpdateResult> cslResult
+    ) {
+        public static UpdateDocumentResult fromVoidResult(OOVoidResult<OOError> result) {
+            return new UpdateDocumentResult(result, Optional.empty());
+        }
+
+        public static UpdateDocumentResult fromCSLResult(CSLUpdateResult cslResult) {
+            return new UpdateDocumentResult(OOVoidResult.ok(), Optional.of(cslResult));
+        }
+
+        public static UpdateDocumentResult error(OOError error) {
+            return new UpdateDocumentResult(OOVoidResult.error(error), Optional.empty());
+        }
+
+        public boolean isError() {
+            return result.isError();
+        }
+
+        public OOError getError() {
+            return result.getError();
+        }
+    }
 
     private final OOBibBaseConnect connection;
 
@@ -75,52 +105,25 @@ public class OOBibBase {
     private CSLCitationOOAdapter cslCitationOOAdapter;
     private CSLUpdateBibliography cslUpdateBibliography;
 
-    private final OOBibBaseGUI gui;
-
     public OOBibBase(Path loPath, DialogService dialogService, OpenOfficePreferences openOfficePreferences)
             throws
             BootstrapException,
             CreationException, IOException, InterruptedException {
 
-        this.dialogService = dialogService;
         this.connection = new OOBibBaseConnect(loPath, dialogService);
         this.openOfficePreferences = openOfficePreferences;
-        this.gui = new OOBibBaseGUI(this, dialogService);
     }
 
-    public OOBibBaseGUI getGUI(){
-        return this.gui;
+    OOBibBaseConnect getConnection() {
+        return this.connection;
     }
 
-    private void initializeCitationAdapter(XTextDocument doc) throws WrappedTargetException, NoSuchElementException {
+    void initializeCitationAdapter(XTextDocument doc) throws WrappedTargetException, NoSuchElementException {
         if (cslCitationOOAdapter == null) {
             StateManager stateManager = Injector.instantiateModelOrService(StateManager.class);
             Supplier<List<BibDatabaseContext>> databasesSupplier = stateManager::getOpenDatabases;
             cslCitationOOAdapter = new CSLCitationOOAdapter(doc, databasesSupplier, openOfficePreferences, Injector.instantiateModelOrService(BibEntryTypesManager.class));
             cslUpdateBibliography = new CSLUpdateBibliography();
-        }
-    }
-
-    public void guiActionSelectDocument(boolean autoSelectForSingle) throws WrappedTargetException, NoSuchElementException {
-        final String errorTitle = Localization.lang("Problem connecting");
-
-        try {
-            connection.selectDocument(autoSelectForSingle);
-        } catch (NoDocumentFoundException ex) {
-            OOError.from(ex).showErrorDialog(dialogService);
-        } catch (DisposedException ex) {
-            OOError.from(ex).setTitle(errorTitle).showErrorDialog(dialogService);
-        } catch (WrappedTargetException
-                 | IndexOutOfBoundsException
-                 | NoSuchElementException ex) {
-            LOGGER.warn(errorTitle, ex);
-            OOError.fromMisc(ex).setTitle(errorTitle).showErrorDialog(dialogService);
-        }
-
-        if (isConnectedToDocument()) {
-            initializeCitationAdapter(this.getXTextDocument().get());
-            dialogService.notify(Localization.lang("Connected to document") + ": "
-                    + this.getCurrentDocumentTitle().orElse(""));
         }
     }
 
@@ -895,16 +898,16 @@ public class OOBibBase {
     ///
     /// @param databases Must have at least one.
     /// @param style     Style.
-    public OOVoidResult<OOError> updateDocument(List<BibDatabase> databases, OOStyle style) {
+    public UpdateDocumentResult updateDocument(List<BibDatabase> databases, OOStyle style) {
 
         OOResult<XTextDocument, OOError> odoc = getXTextDocument();
         if (odoc.isError()) {
-            return odoc.asVoidResult();
+            return UpdateDocumentResult.error(odoc.getError());
         }
 
         OOVoidResult<OOError> preconditions = styleIsRequired(style);
         if (preconditions.isError()) {
-            return preconditions;
+            return UpdateDocumentResult.fromVoidResult(preconditions);
         }
         XTextDocument doc = odoc.get();
 
@@ -918,7 +921,7 @@ public class OOBibBase {
                             checkIfOpenOfficeIsRecordingChanges(doc)
                     ));
             if (checks.isError()) {
-                return checks;
+                return UpdateDocumentResult.fromVoidResult(checks);
             }
 
             try {
@@ -926,25 +929,32 @@ public class OOBibBase {
 
                 OOVoidResult<OOError> overlapCheck = checkRangeOverlaps(doc, frontend);
                 if (overlapCheck.isError()) {
-                    return overlapCheck;
+                    return UpdateDocumentResult.fromVoidResult(overlapCheck);
                 }
 
-                updateJStyleBibliography(databases, jStyle, doc, frontend, fcursor, "");
-                return OOVoidResult.ok();
+                List<String> unresolvedKeys = updateJStyleBibliography(databases, jStyle, doc, frontend, fcursor);
+                if (!unresolvedKeys.isEmpty()) {
+                    String msg = Localization.lang(
+                            "Your OpenOffice/LibreOffice document references the citation key '%0',"
+                                    + " which could not be found in your current library.",
+                            unresolvedKeys.getFirst());
+                    return UpdateDocumentResult.error(new OOError("", msg));
+                }
+                return UpdateDocumentResult.fromVoidResult(OOVoidResult.ok());
             } catch (NoDocumentException ex) {
-                return OOVoidResult.error(OOError.from(ex));
+                return UpdateDocumentResult.error(OOError.from(ex));
             } catch (DisposedException ex) {
-                return OOVoidResult.error(OOError.from(ex));
+                return UpdateDocumentResult.error(OOError.from(ex));
             } catch (CreationException
                      | WrappedTargetException
                      | com.sun.star.lang.IllegalArgumentException ex) {
                 LOGGER.warn("updateDocument: JStyle", ex);
-                return OOVoidResult.error(OOError.fromMisc(ex));
+                return UpdateDocumentResult.error(OOError.fromMisc(ex));
             }
 
         } else if (style instanceof CitationStyle citationStyle) {
             if (!citationStyle.hasBibliography()) {
-                return OOVoidResult.ok();
+                return UpdateDocumentResult.fromVoidResult(OOVoidResult.ok());
             }
 
             OOVoidResult<OOError> checks = collectResults("",
@@ -953,31 +963,31 @@ public class OOBibBase {
                             checkIfOpenOfficeIsRecordingChanges(doc)
                     ));
             if (checks.isError()) {
-                return checks;
+                return UpdateDocumentResult.fromVoidResult(checks);
             }
 
             try {
-                updateCSLBibliography(databases, citationStyle, doc, fcursor);
-                return OOVoidResult.ok();
+                CSLUpdateResult cslResult = updateCSLBibliography(databases, citationStyle, doc, fcursor);
+                return UpdateDocumentResult.fromCSLResult(cslResult);
             } catch (CreationException
                      | com.sun.star.lang.IllegalArgumentException ex) {
                 LOGGER.error("updateDocument: CSL", ex);
-                return OOVoidResult.error(OOError.fromMisc(ex));
+                return UpdateDocumentResult.error(OOError.fromMisc(ex));
             }
         }
 
-        return OOVoidResult.ok();
+        return UpdateDocumentResult.fromVoidResult(OOVoidResult.ok());
     }
 
-    /// Helper method for guiActionUpdateDocument, refreshes a JStyle bibliography.
+    /// Helper method for updateDocument, refreshes a JStyle bibliography.
     ///
     /// @param databases        Must have at least one.
-    /// @param jStyle           Indicates citation formating in JStyle.
+    /// @param jStyle           Indicates citation formatting in JStyle.
     /// @param doc              Text document.
     /// @param frontend,fcursor Used to synchronize document.
-    /// @param errorTitle       Error message for user.
-    private void updateJStyleBibliography(List<BibDatabase> databases, JStyle jStyle, XTextDocument doc, OOFrontend frontend,
-                                          OOResult<FunctionalTextViewCursor, OOError> fcursor, String errorTitle)
+    /// @return List of unresolved citation keys (empty if all resolved)
+    private List<String> updateJStyleBibliography(List<BibDatabase> databases, JStyle jStyle, XTextDocument doc, OOFrontend frontend,
+                                          OOResult<FunctionalTextViewCursor, OOError> fcursor)
             throws CreationException, NoDocumentException, WrappedTargetException {
         List<String> unresolvedKeys;
         try {
@@ -994,22 +1004,17 @@ public class OOBibBase {
             fcursor.get().restore(doc);
         }
 
-        if (!unresolvedKeys.isEmpty()) {
-            String msg = Localization.lang(
-                    "Your OpenOffice/LibreOffice document references the citation key '%0',"
-                            + " which could not be found in your current library.",
-                    unresolvedKeys.getFirst());
-            dialogService.showErrorDialogAndWait(errorTitle, msg);
-        }
+        return unresolvedKeys;
     }
 
-    /// Helper method for guiActionUpdateDocument, refreshes a CSL bibliography.
+    /// Helper method for updateDocument, refreshes a CSL bibliography.
     ///
     /// @param databases     Must have at least one.
     /// @param citationStyle Citation style to update bibliography with.
     /// @param doc           Text document.
     /// @param fcursor       Used to synchronize document.
-    private void updateCSLBibliography(List<BibDatabase> databases, CitationStyle citationStyle, XTextDocument doc,
+    /// @return CSLUpdateResult indicating success, no cited entries, or error
+    private CSLUpdateResult updateCSLBibliography(List<BibDatabase> databases, CitationStyle citationStyle, XTextDocument doc,
                                        OOResult<FunctionalTextViewCursor, OOError> fcursor)
             throws CreationException {
         try {
@@ -1021,13 +1026,9 @@ public class OOBibBase {
                                                    .filter(cslCitationOOAdapter::isCitedEntry)
                                                    .collect(Collectors.toCollection(ArrayList::new));
 
-            // If no entries are cited, show a message and return
+            // If no entries are cited, return info-level result
             if (citedEntries.isEmpty()) {
-                dialogService.showInformationDialogAndWait(
-                        Localization.lang("Bibliography"),
-                        Localization.lang("No cited entries found in the document.")
-                );
-                return;
+                return CSLUpdateResult.NO_CITED_ENTRIES;
             }
 
             // A separate database and database context
@@ -1039,9 +1040,10 @@ public class OOBibBase {
             doc.lockControllers();
 
             cslUpdateBibliography.rebuildCSLBibliography(doc, cslCitationOOAdapter, citedEntries, citationStyle, bibDatabaseContext, Injector.instantiateModelOrService(BibEntryTypesManager.class));
+            return CSLUpdateResult.SUCCESS;
         } catch (NoDocumentException | com.sun.star.uno.Exception e) {
-            dialogService.notify(Localization.lang("No document found or LibreOffice insertion failure"));
             LOGGER.error("Could not update CSL bibliography", e);
+            return CSLUpdateResult.ERROR;
         } finally {
             doc.unlockControllers();
             UnoUndo.leaveUndoContext(doc);
