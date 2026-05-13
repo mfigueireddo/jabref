@@ -37,8 +37,7 @@ public class OOBibBaseGUI {
 
     private final DialogService dialogService;
 
-    public OOBibBaseGUI(Path loPath, DialogService dialogService, OpenOfficePreferences openOfficePreferences)
-            throws BootstrapException, CreationException, IOException, InterruptedException {
+    public OOBibBaseGUI(Path loPath, DialogService dialogService, OpenOfficePreferences openOfficePreferences) throws BootstrapException, CreationException, IOException, InterruptedException {
         this.logic = new OOBibBase(loPath, dialogService, openOfficePreferences);
         this.dialogService = dialogService;
     }
@@ -78,17 +77,14 @@ public class OOBibBaseGUI {
             OOError.from(ex).showErrorDialog(dialogService);
         } catch (DisposedException ex) {
             OOError.from(ex).setTitle(errorTitle).showErrorDialog(dialogService);
-        } catch (WrappedTargetException
-                 | IndexOutOfBoundsException
-                 | NoSuchElementException ex) {
+        } catch (WrappedTargetException | IndexOutOfBoundsException | NoSuchElementException ex) {
             LOGGER.warn(errorTitle, ex);
             OOError.fromMisc(ex).setTitle(errorTitle).showErrorDialog(dialogService);
         }
 
         if (isConnectedToDocument()) {
             logic.initializeCitationAdapter(logic.getXTextDocument().get());
-            dialogService.notify(Localization.lang("Connected to document") + ": "
-                    + getCurrentDocumentTitle().orElse(""));
+            dialogService.notify(Localization.lang("Connected to document") + ": " + getCurrentDocumentTitle().orElse(""));
         }
     }
 
@@ -127,29 +123,16 @@ public class OOBibBaseGUI {
         testDialog(errorTitle, logic.applyCitationEntries(citationEntries));
     }
 
-    public void insertEntry(List<BibEntry> entries,
-                                     BibDatabaseContext bibDatabaseContext,
-                                     BibEntryTypesManager bibEntryTypesManager,
-                                     OOStyle style,
-                                     CitationType citationType,
-                                     String pageInfo,
-                                     Optional<Update.SyncOptions> syncOptions) {
+    public void insertEntry(List<BibEntry> entries, BibDatabaseContext bibDatabaseContext, BibEntryTypesManager bibEntryTypesManager, OOStyle style, CitationType citationType, String pageInfo, Optional<Update.SyncOptions> syncOptions) {
 
         final String errorTitle = "Could not insert citation";
-        testDialog(errorTitle, logic.insertEntry(entries,
-                bibDatabaseContext,
-                bibEntryTypesManager,
-                style,
-                citationType,
-                pageInfo,
-                syncOptions));
+        testDialog(errorTitle, logic.insertEntry(entries, bibDatabaseContext, bibEntryTypesManager, style, citationType, pageInfo, syncOptions));
     }
 
     public void mergeCitationGroups(List<BibDatabase> databases, OOStyle style) {
         final String errorTitle = Localization.lang("Problem combining cite markers");
         testDialog(errorTitle, logic.mergeCitationGroups(databases, style));
     }
-
 
     /// Do the opposite of MergeCitationGroups. Combined markers are split, with a space inserted between.
     public void separateCitations(List<BibDatabase> databases, OOStyle style) {
@@ -174,11 +157,10 @@ public class OOBibBaseGUI {
         // Handle CSL-specific results
         if (result.cslResult().isPresent()) {
             switch (result.cslResult().get()) {
-                case NO_CITED_ENTRIES -> dialogService.showInformationDialogAndWait(
-                        Localization.lang("Bibliography"),
-                        Localization.lang("No cited entries found in the document."));
-                case ERROR -> dialogService.notify(
-                        Localization.lang("No document found or LibreOffice insertion failure"));
+                case NO_CITED_ENTRIES ->
+                        dialogService.showInformationDialogAndWait(Localization.lang("Bibliography"), Localization.lang("No cited entries found in the document."));
+                case ERROR ->
+                        dialogService.notify(Localization.lang("No document found or LibreOffice insertion failure"));
                 case SUCCESS -> {
                     // Success - nothing to show
                 }
@@ -191,14 +173,11 @@ public class OOBibBaseGUI {
     /// Does not refresh the bibliography.
     ///
     /// @param returnPartialResult If there are some unresolved keys, shall we return an otherwise nonempty result, or Optional.empty()?
-    public Optional<BibDatabase> exportCitedHelper(
-            List<BibDatabase> databases,
-            boolean returnPartialResult) {
+    public Optional<BibDatabase> exportCitedHelper(List<BibDatabase> databases, boolean returnPartialResult) {
 
         final String errorTitle = Localization.lang("Unable to generate new library");
 
-        OOResult<BibDatabase, OOError> result =
-                logic.exportCitedHelper(databases, returnPartialResult);
+        OOResult<BibDatabase, OOError> result = logic.exportCitedHelper(databases, returnPartialResult);
 
         if (testDialog(errorTitle, result.asVoidResult())) {
             return Optional.empty();

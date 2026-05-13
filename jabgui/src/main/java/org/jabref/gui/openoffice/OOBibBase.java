@@ -15,7 +15,6 @@ import org.jabref.gui.StateManager;
 import org.jabref.logic.JabRefException;
 import org.jabref.logic.citationstyle.CitationStyle;
 import org.jabref.logic.l10n.Localization;
-import org.jabref.logic.openoffice.NoDocumentFoundException;
 import org.jabref.logic.openoffice.OpenOfficePreferences;
 import org.jabref.logic.openoffice.action.EditInsert;
 import org.jabref.logic.openoffice.action.EditMerge;
@@ -67,16 +66,11 @@ public class OOBibBase {
 
     /// Result type for CSL bibliography update operations
     public enum CSLUpdateResult {
-        SUCCESS,
-        NO_CITED_ENTRIES,
-        ERROR
+        SUCCESS, NO_CITED_ENTRIES, ERROR
     }
 
     /// Result for updateDocument operation that can contain CSL-specific outcomes
-    public record UpdateDocumentResult(
-            OOVoidResult<OOError> result,
-            Optional<CSLUpdateResult> cslResult
-    ) {
+    public record UpdateDocumentResult(OOVoidResult<OOError> result, Optional<CSLUpdateResult> cslResult) {
         public static UpdateDocumentResult fromVoidResult(OOVoidResult<OOError> result) {
             return new UpdateDocumentResult(result, Optional.empty());
         }
@@ -105,10 +99,7 @@ public class OOBibBase {
     private CSLCitationOOAdapter cslCitationOOAdapter;
     private CSLUpdateBibliography cslUpdateBibliography;
 
-    public OOBibBase(Path loPath, DialogService dialogService, OpenOfficePreferences openOfficePreferences)
-            throws
-            BootstrapException,
-            CreationException, IOException, InterruptedException {
+    public OOBibBase(Path loPath, DialogService dialogService, OpenOfficePreferences openOfficePreferences) throws BootstrapException, CreationException, IOException, InterruptedException {
 
         this.connection = new OOBibBaseConnect(loPath, dialogService);
         this.openOfficePreferences = openOfficePreferences;
@@ -156,10 +147,7 @@ public class OOBibBase {
      * ******************************************************/
 
     OOVoidResult<OOError> collectResults(String errorTitle, List<OOVoidResult<OOError>> results) {
-        String msg = results.stream()
-                            .filter(OOVoidResult::isError)
-                            .map(e -> e.getError().getLocalizedMessage())
-                            .collect(Collectors.joining("\n\n"));
+        String msg = results.stream().filter(OOVoidResult::isError).map(e -> e.getError().getLocalizedMessage()).collect(Collectors.joining("\n\n"));
         if (msg.isEmpty()) {
             return OOVoidResult.ok();
         } else {
@@ -177,10 +165,7 @@ public class OOBibBase {
         try {
             cursor.getStart();
         } catch (com.sun.star.uno.RuntimeException ex) {
-            String msg =
-                    Localization.lang("Please move the cursor"
-                            + " to the location for the new citation.") + "\n"
-                            + Localization.lang("I cannot insert to the cursor's current location.");
+            String msg = Localization.lang("Please move the cursor" + " to the location for the new citation.") + "\n" + Localization.lang("I cannot insert to the cursor's current location.");
             return OOResult.error(new OOError(errorTitle, msg, ex));
         }
         return OOResult.ok(cursor);
@@ -188,12 +173,7 @@ public class OOBibBase {
 
     /// This may move the view cursor.
     OOResult<FunctionalTextViewCursor, OOError> getFunctionalTextViewCursor(XTextDocument doc, String errorTitle) {
-        String messageOnFailureToObtain =
-                Localization.lang("Please move the cursor into the document text.")
-                        + "\n"
-                        + Localization.lang("To get the visual positions of your citations"
-                        + " I need to move the cursor around,"
-                        + " but could not get it.");
+        String messageOnFailureToObtain = Localization.lang("Please move the cursor into the document text.") + "\n" + Localization.lang("To get the visual positions of your citations" + " I need to move the cursor around," + " but could not get it.");
         OOResult<FunctionalTextViewCursor, String> result = FunctionalTextViewCursor.get(doc);
         if (result.isError()) {
             LOGGER.warn(result.getError());
@@ -206,11 +186,7 @@ public class OOBibBase {
         boolean requireSeparation = false;
         int maxReportedOverlaps = 10;
         try {
-            return frontend.checkRangeOverlaps(doc,
-                                   new ArrayList<>(),
-                                   requireSeparation,
-                                   maxReportedOverlaps)
-                           .mapError(OOError::from);
+            return frontend.checkRangeOverlaps(doc, new ArrayList<>(), requireSeparation, maxReportedOverlaps).mapError(OOError::from);
         } catch (NoDocumentException ex) {
             return OOVoidResult.error(OOError.from(ex).setTitle(errorTitle));
         } catch (WrappedTargetException ex) {
@@ -227,9 +203,7 @@ public class OOBibBase {
         boolean requireSeparation = false;
         OOVoidResult<JabRefException> res;
         try {
-            res = frontend.checkRangeOverlapsWithCursor(doc,
-                    userRanges,
-                    requireSeparation);
+            res = frontend.checkRangeOverlapsWithCursor(doc, userRanges, requireSeparation);
         } catch (NoDocumentException ex) {
             return OOVoidResult.error(OOError.from(ex).setTitle(errorTitle));
         } catch (WrappedTargetException ex) {
@@ -238,8 +212,7 @@ public class OOBibBase {
 
         if (res.isError()) {
             final String xtitle = Localization.lang("The cursor is in a protected area.");
-            return OOVoidResult.error(
-                    new OOError(xtitle, xtitle + "\n" + res.getError().getLocalizedMessage() + "\n"));
+            return OOVoidResult.error(new OOError(xtitle, xtitle + "\n" + res.getError().getLocalizedMessage() + "\n"));
         }
         return res.mapError(OOError::from);
     }
@@ -258,24 +231,20 @@ public class OOBibBase {
             if (recordingChanges || (nRedlines > 0)) {
                 String msg = "";
                 if (recordingChanges) {
-                    msg += Localization.lang("Cannot work with"
-                            + " [Edit]/[Track Changes]/[Record] turned on.");
+                    msg += Localization.lang("Cannot work with" + " [Edit]/[Track Changes]/[Record] turned on.");
                 }
                 if (nRedlines > 0) {
                     if (recordingChanges) {
                         msg += "\n";
                     }
-                    msg += Localization.lang("Changes by JabRef"
-                            + " could result in unexpected interactions with"
-                            + " recorded changes.");
+                    msg += Localization.lang("Changes by JabRef" + " could result in unexpected interactions with" + " recorded changes.");
                     msg += "\n";
                     msg += Localization.lang("Use [Edit]/[Track Changes]/[Manage] to resolve them first.");
                 }
                 return OOVoidResult.error(new OOError(errorTitle, msg));
             }
         } catch (WrappedTargetException ex) {
-            String msg = Localization.lang("Error while checking if Writer"
-                    + " is recording changes or has recorded changes.");
+            String msg = Localization.lang("Error while checking if Writer" + " is recording changes or has recorded changes.");
             return OOVoidResult.error(new OOError(errorTitle, msg, ex));
         }
         return OOVoidResult.ok();
@@ -295,14 +264,12 @@ public class OOBibBase {
             return OOResult.ok(new OOFrontend(doc));
         } catch (NoDocumentException ex) {
             return OOResult.error(OOError.from(ex).setTitle(errorTitle));
-        } catch (WrappedTargetException
-                 | RuntimeException ex) {
+        } catch (WrappedTargetException | RuntimeException ex) {
             return OOResult.error(OOError.fromMisc(ex).setTitle(errorTitle));
         }
     }
 
-    <T> OOVoidResult<OOError> collectionIsRequired(Collection<T> collection,
-                                                   Supplier<OOError> errorSupplier) {
+    <T> OOVoidResult<OOError> collectionIsRequired(Collection<T> collection, Supplier<OOError> errorSupplier) {
         if (collection == null || collection.isEmpty()) {
             return OOVoidResult.error(errorSupplier.get());
         } else {
@@ -313,62 +280,31 @@ public class OOBibBase {
     /*
      * Checks existence and also checks if it is not an internal name.
      */
-    private OOVoidResult<OOError> checkStyleExistsInTheDocument(String familyName,
-                                                                String styleName,
-                                                                XTextDocument doc,
-                                                                String labelInJstyleFile,
-                                                                String pathToStyleFile)
-            throws
-            WrappedTargetException {
+    private OOVoidResult<OOError> checkStyleExistsInTheDocument(String familyName, String styleName, XTextDocument doc, String labelInJstyleFile, String pathToStyleFile) throws WrappedTargetException {
 
         Optional<String> internalName = UnoStyle.getInternalNameOfStyle(doc, familyName, styleName);
 
         if (internalName.isEmpty()) {
-            String msg =
-                    switch (familyName) {
-                        case UnoStyle.PARAGRAPH_STYLES ->
-                                Localization.lang("The %0 paragraph style '%1' is missing from the document",
-                                        labelInJstyleFile,
-                                        styleName);
-                        case UnoStyle.CHARACTER_STYLES ->
-                                Localization.lang("The %0 character style '%1' is missing from the document",
-                                        labelInJstyleFile,
-                                        styleName);
-                        default ->
-                                throw new IllegalArgumentException("Expected " + UnoStyle.CHARACTER_STYLES
-                                        + " or " + UnoStyle.PARAGRAPH_STYLES
-                                        + " for familyName");
-                    }
-                            + "\n"
-                            + Localization.lang("Please create it in the document or change in the file:")
-                            + "\n"
-                            + pathToStyleFile;
+            String msg = switch (familyName) {
+                case UnoStyle.PARAGRAPH_STYLES ->
+                        Localization.lang("The %0 paragraph style '%1' is missing from the document", labelInJstyleFile, styleName);
+                case UnoStyle.CHARACTER_STYLES ->
+                        Localization.lang("The %0 character style '%1' is missing from the document", labelInJstyleFile, styleName);
+                default ->
+                        throw new IllegalArgumentException("Expected " + UnoStyle.CHARACTER_STYLES + " or " + UnoStyle.PARAGRAPH_STYLES + " for familyName");
+            } + "\n" + Localization.lang("Please create it in the document or change in the file:") + "\n" + pathToStyleFile;
             return OOVoidResult.error(new OOError("StyleIsNotKnown", msg));
         }
 
         if (!internalName.get().equals(styleName)) {
-            String msg =
-                    switch (familyName) {
-                        case UnoStyle.PARAGRAPH_STYLES ->
-                                Localization.lang("The %0 paragraph style '%1' is a display name for '%2'.",
-                                        labelInJstyleFile,
-                                        styleName,
-                                        internalName.get());
-                        case UnoStyle.CHARACTER_STYLES ->
-                                Localization.lang("The %0 character style '%1' is a display name for '%2'.",
-                                        labelInJstyleFile,
-                                        styleName,
-                                        internalName.get());
-                        default ->
-                                throw new IllegalArgumentException("Expected " + UnoStyle.CHARACTER_STYLES
-                                        + " or " + UnoStyle.PARAGRAPH_STYLES
-                                        + " for familyName");
-                    }
-                            + "\n"
-                            + Localization.lang("Please use the latter in the style file below"
-                            + " to avoid localization problems.")
-                            + "\n"
-                            + pathToStyleFile;
+            String msg = switch (familyName) {
+                case UnoStyle.PARAGRAPH_STYLES ->
+                        Localization.lang("The %0 paragraph style '%1' is a display name for '%2'.", labelInJstyleFile, styleName, internalName.get());
+                case UnoStyle.CHARACTER_STYLES ->
+                        Localization.lang("The %0 character style '%1' is a display name for '%2'.", labelInJstyleFile, styleName, internalName.get());
+                default ->
+                        throw new IllegalArgumentException("Expected " + UnoStyle.CHARACTER_STYLES + " or " + UnoStyle.PARAGRAPH_STYLES + " for familyName");
+            } + "\n" + Localization.lang("Please use the latter in the style file below" + " to avoid localization problems.") + "\n" + pathToStyleFile;
             return OOVoidResult.error(new OOError("StyleNameIsNotInternal", msg));
         }
         return OOVoidResult.ok();
@@ -379,27 +315,13 @@ public class OOBibBase {
 
         List<OOVoidResult<OOError>> results = new ArrayList<>();
         try {
-            results.add(checkStyleExistsInTheDocument(UnoStyle.PARAGRAPH_STYLES,
-                    jStyle.getReferenceHeaderParagraphFormat(),
-                    doc,
-                    "ReferenceHeaderParagraphFormat",
-                    pathToStyleFile));
-            results.add(checkStyleExistsInTheDocument(UnoStyle.PARAGRAPH_STYLES,
-                    jStyle.getReferenceParagraphFormat(),
-                    doc,
-                    "ReferenceParagraphFormat",
-                    pathToStyleFile));
+            results.add(checkStyleExistsInTheDocument(UnoStyle.PARAGRAPH_STYLES, jStyle.getReferenceHeaderParagraphFormat(), doc, "ReferenceHeaderParagraphFormat", pathToStyleFile));
+            results.add(checkStyleExistsInTheDocument(UnoStyle.PARAGRAPH_STYLES, jStyle.getReferenceParagraphFormat(), doc, "ReferenceParagraphFormat", pathToStyleFile));
             if (jStyle.isFormatCitations()) {
-                results.add(checkStyleExistsInTheDocument(UnoStyle.CHARACTER_STYLES,
-                        jStyle.getCitationCharacterFormat(),
-                        doc,
-                        "CitationCharacterFormat",
-                        pathToStyleFile));
+                results.add(checkStyleExistsInTheDocument(UnoStyle.CHARACTER_STYLES, jStyle.getCitationCharacterFormat(), doc, "CitationCharacterFormat", pathToStyleFile));
             }
         } catch (WrappedTargetException ex) {
-            results.add(OOVoidResult.error(new OOError("Other error in checkStyleExistsInTheDocument",
-                    ex.getMessage(),
-                    ex)));
+            results.add(OOVoidResult.error(new OOError("Other error in checkStyleExistsInTheDocument", ex.getMessage(), ex)));
         }
 
         return collectResults("checkStyleExistsInTheDocument failed", results);
@@ -464,10 +386,7 @@ public class OOBibBase {
             return OOVoidResult.error(OOError.from(ex));
         } catch (DisposedException ex) {
             return OOVoidResult.error(OOError.from(ex));
-        } catch (PropertyVetoException
-                 | IllegalTypeException
-                 | WrappedTargetException
-                 | com.sun.star.lang.IllegalArgumentException ex) {
+        } catch (PropertyVetoException | IllegalTypeException | WrappedTargetException | com.sun.star.lang.IllegalArgumentException ex) {
             LOGGER.warn("applyCitationEntries", ex);
             return OOVoidResult.error(OOError.fromMisc(ex));
         }
@@ -487,13 +406,7 @@ public class OOBibBase {
     /// @param citationType       Indicates whether it is an in-text citation, a citation in parenthesis or an invisible citation.
     /// @param pageInfo           A single page-info for these entries. Attributed to the last entry.
     /// @param syncOptions        Indicates whether in-text citations should be refreshed in the document. Optional.empty() indicates no refresh. Otherwise, provides options for refreshing the reference list.
-    public OOVoidResult<OOError> insertEntry(List<BibEntry> entries,
-                                             BibDatabaseContext bibDatabaseContext,
-                                             BibEntryTypesManager bibEntryTypesManager,
-                                             OOStyle style,
-                                             CitationType citationType,
-                                             String pageInfo,
-                                             Optional<Update.SyncOptions> syncOptions) {
+    public OOVoidResult<OOError> insertEntry(List<BibEntry> entries, BibDatabaseContext bibDatabaseContext, BibEntryTypesManager bibEntryTypesManager, OOStyle style, CitationType citationType, String pageInfo, Optional<Update.SyncOptions> syncOptions) {
 
         OOResult<XTextDocument, OOError> odoc = getXTextDocument();
         if (odoc.isError()) {
@@ -501,11 +414,7 @@ public class OOBibBase {
         }
         XTextDocument doc = odoc.get();
 
-        OOVoidResult<OOError> preconditions = collectResults("",
-                List.of(
-                        styleIsRequired(style),
-                        collectionIsRequired(entries, OOError::noEntriesSelectedForCitation)
-                ));
+        OOVoidResult<OOError> preconditions = collectResults("", List.of(styleIsRequired(style), collectionIsRequired(entries, OOError::noEntriesSelectedForCitation)));
         if (preconditions.isError()) {
             return preconditions;
         }
@@ -526,11 +435,7 @@ public class OOBibBase {
         }
 
         if (style instanceof JStyle jStyle) {
-            OOVoidResult<OOError> styleChecks = collectResults("",
-                    List.of(
-                            checkStylesExistInTheDocument(jStyle, doc),
-                            checkIfOpenOfficeIsRecordingChanges(doc)
-                    ));
+            OOVoidResult<OOError> styleChecks = collectResults("", List.of(checkStylesExistInTheDocument(jStyle, doc), checkIfOpenOfficeIsRecordingChanges(doc)));
             if (styleChecks.isError()) {
                 return styleChecks;
             }
@@ -546,8 +451,7 @@ public class OOBibBase {
             if (fcursor.isError()) {
                 return fcursor.asVoidResult();
             }
-            OOVoidResult<OOError> dbCheck = collectionIsRequired(syncOptions.get().databases,
-                    OOError::noDataBaseIsOpenForSyncingAfterCitation);
+            OOVoidResult<OOError> dbCheck = collectionIsRequired(syncOptions.get().databases, OOError::noDataBaseIsOpenForSyncingAfterCitation);
             if (dbCheck.isError()) {
                 return dbCheck;
             }
@@ -556,36 +460,16 @@ public class OOBibBase {
         try {
             UnoUndo.enterUndoContext(doc, "Insert citation");
             if (style instanceof CitationStyle citationStyle) {
-                insertCSLCitation(entries,
-                        doc,
-                        citationType,
-                        citationStyle,
-                        bibDatabaseContext,
-                        bibEntryTypesManager,
-                        cursor,
-                        syncOptions);
+                insertCSLCitation(entries, doc, citationType, citationStyle, bibDatabaseContext, bibEntryTypesManager, cursor, syncOptions);
             } else if (style instanceof JStyle jStyle) {
-                insertJStyleCitation(entries,
-                        doc,
-                        citationType,
-                        jStyle,
-                        frontend,
-                        cursor,
-                        bibDatabaseContext,
-                        syncOptions,
-                        pageInfo,
-                        fcursor);
+                insertJStyleCitation(entries, doc, citationType, jStyle, frontend, cursor, bibDatabaseContext, syncOptions, pageInfo, fcursor);
             }
             return OOVoidResult.ok();
         } catch (NoDocumentException ex) {
             return OOVoidResult.error(OOError.from(ex));
         } catch (DisposedException ex) {
             return OOVoidResult.error(OOError.from(ex));
-        } catch (CreationException
-                 | WrappedTargetException
-                 | PropertyVetoException
-                 | IllegalTypeException
-                 | NotRemoveableException ex) {
+        } catch (CreationException | WrappedTargetException | PropertyVetoException | IllegalTypeException | NotRemoveableException ex) {
             LOGGER.warn("insertEntry", ex);
             return OOVoidResult.error(OOError.fromMisc(ex));
         } catch (com.sun.star.uno.Exception ex) {
@@ -605,16 +489,7 @@ public class OOBibBase {
     /// @param citationType       Indicates whether it is an in-text citation, a citation in parenthesis or an invisible citation.
     /// @param citationStyle      Indicates style, name and path of citation
     /// @param syncOptions        Indicates whether in-text citations should be refreshed in the document. Optional.empty() indicates no refresh. Otherwise, provides options for refreshing the reference list.
-    public void insertCSLCitation(List<BibEntry> entries,
-                                  XTextDocument doc,
-                                  CitationType citationType,
-                                  CitationStyle citationStyle,
-                                  BibDatabaseContext bibDatabaseContext,
-                                  BibEntryTypesManager bibEntryTypesManager,
-                                  OOResult<XTextCursor,
-                                          OOError> cursor,
-                                  Optional<Update.SyncOptions> syncOptions)
-            throws CreationException, com.sun.star.uno.Exception {
+    public void insertCSLCitation(List<BibEntry> entries, XTextDocument doc, CitationType citationType, CitationStyle citationStyle, BibDatabaseContext bibDatabaseContext, BibEntryTypesManager bibEntryTypesManager, OOResult<XTextCursor, OOError> cursor, Optional<Update.SyncOptions> syncOptions) throws CreationException, com.sun.star.uno.Exception {
         try {
             // Lock document controllers - disable refresh during the process (avoids document flicker during writing)
             // MUST always be paired with an unlockControllers() call
@@ -651,33 +526,8 @@ public class OOBibBase {
     /// @param bibDatabaseContext The database the entries belong to (all of them). Used when creating the citation mark.
     /// @param syncOptions        Indicates whether in-text citations should be refreshed in the document. Optional.empty() indicates no refresh. Otherwise, provides options for refreshing the reference list.
     /// @param pageInfo           A single page-info for these entries. Attributed to the last entry.
-    public void insertJStyleCitation(List<BibEntry> entries,
-                                     XTextDocument doc,
-                                     CitationType citationType,
-                                     JStyle jStyle,
-                                     OOResult<OOFrontend,
-                                             OOError> frontend,
-                                     OOResult<XTextCursor,
-                                             OOError> cursor,
-                                     BibDatabaseContext bibDatabaseContext,
-                                     Optional<Update.SyncOptions> syncOptions,
-                                     String pageInfo,
-                                     OOResult<FunctionalTextViewCursor,
-                                             OOError> fcursor)
-            throws PropertyVetoException,
-            WrappedTargetException,
-            IllegalTypeException,
-            NotRemoveableException,
-            CreationException,
-            NoDocumentException {
-        EditInsert.insertCitationGroup(doc,
-                frontend.get(),
-                cursor.get(),
-                entries,
-                bibDatabaseContext.getDatabase(),
-                jStyle,
-                citationType,
-                pageInfo);
+    public void insertJStyleCitation(List<BibEntry> entries, XTextDocument doc, CitationType citationType, JStyle jStyle, OOResult<OOFrontend, OOError> frontend, OOResult<XTextCursor, OOError> cursor, BibDatabaseContext bibDatabaseContext, Optional<Update.SyncOptions> syncOptions, String pageInfo, OOResult<FunctionalTextViewCursor, OOError> fcursor) throws PropertyVetoException, WrappedTargetException, IllegalTypeException, NotRemoveableException, CreationException, NoDocumentException {
+        EditInsert.insertCitationGroup(doc, frontend.get(), cursor.get(), entries, bibDatabaseContext.getDatabase(), jStyle, citationType, pageInfo);
 
         if (syncOptions.isPresent()) {
             Update.resyncDocument(doc, jStyle, fcursor.get(), syncOptions.get());
@@ -697,23 +547,14 @@ public class OOBibBase {
             return odoc.asVoidResult();
         }
 
-        OOVoidResult<OOError> preconditions = collectResults("",
-                List.of(
-                        styleIsRequired(jStyle),
-                        collectionIsRequired(databases, OOError::noDataBaseIsOpen)
-                ));
+        OOVoidResult<OOError> preconditions = collectResults("", List.of(styleIsRequired(jStyle), collectionIsRequired(databases, OOError::noDataBaseIsOpen)));
         if (preconditions.isError()) {
             return preconditions;
         }
         XTextDocument doc = odoc.get();
 
         OOResult<FunctionalTextViewCursor, OOError> fcursor = getFunctionalTextViewCursor(doc, "");
-        OOVoidResult<OOError> checks = collectResults("",
-                List.of(
-                        fcursor.asVoidResult(),
-                        checkStylesExistInTheDocument(jStyle, doc),
-                        checkIfOpenOfficeIsRecordingChanges(doc)
-                ));
+        OOVoidResult<OOError> checks = collectResults("", List.of(fcursor.asVoidResult(), checkStylesExistInTheDocument(jStyle, doc), checkIfOpenOfficeIsRecordingChanges(doc)));
         if (checks.isError()) {
             return checks;
         }
@@ -733,12 +574,7 @@ public class OOBibBase {
             return OOVoidResult.error(OOError.from(ex));
         } catch (DisposedException ex) {
             return OOVoidResult.error(OOError.from(ex));
-        } catch (CreationException
-                 | IllegalTypeException
-                 | NotRemoveableException
-                 | PropertyVetoException
-                 | WrappedTargetException
-                 | com.sun.star.lang.IllegalArgumentException ex) {
+        } catch (CreationException | IllegalTypeException | NotRemoveableException | PropertyVetoException | WrappedTargetException | com.sun.star.lang.IllegalArgumentException ex) {
             LOGGER.warn("mergeCitationGroups", ex);
             return OOVoidResult.error(OOError.fromMisc(ex));
         } finally {
@@ -765,23 +601,14 @@ public class OOBibBase {
             return odoc.asVoidResult();
         }
 
-        OOVoidResult<OOError> preconditions = collectResults("",
-                List.of(
-                        styleIsRequired(jStyle),
-                        collectionIsRequired(databases, OOError::noDataBaseIsOpen)
-                ));
+        OOVoidResult<OOError> preconditions = collectResults("", List.of(styleIsRequired(jStyle), collectionIsRequired(databases, OOError::noDataBaseIsOpen)));
         if (preconditions.isError()) {
             return preconditions;
         }
         XTextDocument doc = odoc.get();
 
         OOResult<FunctionalTextViewCursor, OOError> fcursor = getFunctionalTextViewCursor(doc, "");
-        OOVoidResult<OOError> checks = collectResults("",
-                List.of(
-                        fcursor.asVoidResult(),
-                        checkStylesExistInTheDocument(jStyle, doc),
-                        checkIfOpenOfficeIsRecordingChanges(doc)
-                ));
+        OOVoidResult<OOError> checks = collectResults("", List.of(fcursor.asVoidResult(), checkStylesExistInTheDocument(jStyle, doc), checkIfOpenOfficeIsRecordingChanges(doc)));
         if (checks.isError()) {
             return checks;
         }
@@ -801,12 +628,7 @@ public class OOBibBase {
             return OOVoidResult.error(OOError.from(ex));
         } catch (DisposedException ex) {
             return OOVoidResult.error(OOError.from(ex));
-        } catch (CreationException
-                 | IllegalTypeException
-                 | NotRemoveableException
-                 | PropertyVetoException
-                 | WrappedTargetException
-                 | com.sun.star.lang.IllegalArgumentException ex) {
+        } catch (CreationException | IllegalTypeException | NotRemoveableException | PropertyVetoException | WrappedTargetException | com.sun.star.lang.IllegalArgumentException ex) {
             LOGGER.warn("separateCitations", ex);
             return OOVoidResult.error(OOError.fromMisc(ex));
         } finally {
@@ -825,12 +647,9 @@ public class OOBibBase {
     /// Lógica pura: exporta as referências citadas para um novo BibDatabase.
     ///
     /// Não atualiza a bibliografia.
-    ///
     /// @param returnPartialResult Se houver chaves não resolvidas, retorna o
     ///                            resultado parcial (true) ou erro (false).
-    public OOResult<BibDatabase, OOError> exportCitedHelper(
-            List<BibDatabase> databases,
-            boolean returnPartialResult) {
+    public OOResult<BibDatabase, OOError> exportCitedHelper(List<BibDatabase> databases, boolean returnPartialResult) {
 
         OOResult<XTextDocument, OOError> odoc = getXTextDocument();
         if (odoc.isError()) {
@@ -856,24 +675,12 @@ public class OOBibBase {
             }
 
             if (!result.newDatabase.hasEntries()) {
-                return OOResult.error(new OOError(
-                        "",
-                        Localization.lang("Your OpenOffice/LibreOffice document references"
-                                + " no citation keys"
-                                + " which could also be found in your current library.")));
+                return OOResult.error(new OOError("", Localization.lang("Your OpenOffice/LibreOffice document references" + " no citation keys" + " which could also be found in your current library.")));
             }
 
             List<String> unresolvedKeys = result.unresolvedKeys;
             if (!unresolvedKeys.isEmpty()) {
-                OOError unresolvedError = new OOError(
-                        "",
-                        Localization.lang(
-                                "Your OpenOffice/LibreOffice document references"
-                                        + " at least %0 citation keys"
-                                        + " which could not be found in your current library."
-                                        + " Some of these are %1.",
-                                String.valueOf(unresolvedKeys.size()),
-                                String.join(", ", unresolvedKeys)));
+                OOError unresolvedError = new OOError("", Localization.lang("Your OpenOffice/LibreOffice document references" + " at least %0 citation keys" + " which could not be found in your current library." + " Some of these are %1.", String.valueOf(unresolvedKeys.size()), String.join(", ", unresolvedKeys)));
                 if (returnPartialResult) {
                     return OOResult.ok(result.newDatabase);
                 } else {
@@ -882,13 +689,11 @@ public class OOBibBase {
             }
 
             return OOResult.ok(result.newDatabase);
-
         } catch (NoDocumentException ex) {
             return OOResult.error(OOError.from(ex));
         } catch (DisposedException ex) {
             return OOResult.error(OOError.from(ex));
-        } catch (WrappedTargetException
-                 | com.sun.star.lang.IllegalArgumentException ex) {
+        } catch (WrappedTargetException | com.sun.star.lang.IllegalArgumentException ex) {
             LOGGER.warn("Problem generating new database.", ex);
             return OOResult.error(OOError.fromMisc(ex));
         }
@@ -914,12 +719,7 @@ public class OOBibBase {
         OOResult<FunctionalTextViewCursor, OOError> fcursor = getFunctionalTextViewCursor(doc, "");
 
         if (style instanceof JStyle jStyle) {
-            OOVoidResult<OOError> checks = collectResults("",
-                    List.of(
-                            fcursor.asVoidResult(),
-                            checkStylesExistInTheDocument(jStyle, doc),
-                            checkIfOpenOfficeIsRecordingChanges(doc)
-                    ));
+            OOVoidResult<OOError> checks = collectResults("", List.of(fcursor.asVoidResult(), checkStylesExistInTheDocument(jStyle, doc), checkIfOpenOfficeIsRecordingChanges(doc)));
             if (checks.isError()) {
                 return UpdateDocumentResult.fromVoidResult(checks);
             }
@@ -934,10 +734,7 @@ public class OOBibBase {
 
                 List<String> unresolvedKeys = updateJStyleBibliography(databases, jStyle, doc, frontend, fcursor);
                 if (!unresolvedKeys.isEmpty()) {
-                    String msg = Localization.lang(
-                            "Your OpenOffice/LibreOffice document references the citation key '%0',"
-                                    + " which could not be found in your current library.",
-                            unresolvedKeys.getFirst());
+                    String msg = Localization.lang("Your OpenOffice/LibreOffice document references the citation key '%0'," + " which could not be found in your current library.", unresolvedKeys.getFirst());
                     return UpdateDocumentResult.error(new OOError("", msg));
                 }
                 return UpdateDocumentResult.fromVoidResult(OOVoidResult.ok());
@@ -945,23 +742,16 @@ public class OOBibBase {
                 return UpdateDocumentResult.error(OOError.from(ex));
             } catch (DisposedException ex) {
                 return UpdateDocumentResult.error(OOError.from(ex));
-            } catch (CreationException
-                     | WrappedTargetException
-                     | com.sun.star.lang.IllegalArgumentException ex) {
+            } catch (CreationException | WrappedTargetException | com.sun.star.lang.IllegalArgumentException ex) {
                 LOGGER.warn("updateDocument: JStyle", ex);
                 return UpdateDocumentResult.error(OOError.fromMisc(ex));
             }
-
         } else if (style instanceof CitationStyle citationStyle) {
             if (!citationStyle.hasBibliography()) {
                 return UpdateDocumentResult.fromVoidResult(OOVoidResult.ok());
             }
 
-            OOVoidResult<OOError> checks = collectResults("",
-                    List.of(
-                            fcursor.asVoidResult(),
-                            checkIfOpenOfficeIsRecordingChanges(doc)
-                    ));
+            OOVoidResult<OOError> checks = collectResults("", List.of(fcursor.asVoidResult(), checkIfOpenOfficeIsRecordingChanges(doc)));
             if (checks.isError()) {
                 return UpdateDocumentResult.fromVoidResult(checks);
             }
@@ -969,8 +759,7 @@ public class OOBibBase {
             try {
                 CSLUpdateResult cslResult = updateCSLBibliography(databases, citationStyle, doc, fcursor);
                 return UpdateDocumentResult.fromCSLResult(cslResult);
-            } catch (CreationException
-                     | com.sun.star.lang.IllegalArgumentException ex) {
+            } catch (CreationException | com.sun.star.lang.IllegalArgumentException ex) {
                 LOGGER.error("updateDocument: CSL", ex);
                 return UpdateDocumentResult.error(OOError.fromMisc(ex));
             }
@@ -986,17 +775,13 @@ public class OOBibBase {
     /// @param doc              Text document.
     /// @param frontend,fcursor Used to synchronize document.
     /// @return List of unresolved citation keys (empty if all resolved)
-    private List<String> updateJStyleBibliography(List<BibDatabase> databases, JStyle jStyle, XTextDocument doc, OOFrontend frontend,
-                                          OOResult<FunctionalTextViewCursor, OOError> fcursor)
-            throws CreationException, NoDocumentException, WrappedTargetException {
+    private List<String> updateJStyleBibliography(List<BibDatabase> databases, JStyle jStyle, XTextDocument doc, OOFrontend frontend, OOResult<FunctionalTextViewCursor, OOError> fcursor) throws CreationException, NoDocumentException, WrappedTargetException {
         List<String> unresolvedKeys;
         try {
             UnoUndo.enterUndoContext(doc, "Refresh bibliography");
 
             Update.SyncOptions syncOptions = new Update.SyncOptions(databases);
-            syncOptions
-                    .setUpdateBibliography(true)
-                    .setAlwaysAddCitedOnPages(openOfficePreferences.getAlwaysAddCitedOnPages());
+            syncOptions.setUpdateBibliography(true).setAlwaysAddCitedOnPages(openOfficePreferences.getAlwaysAddCitedOnPages());
 
             unresolvedKeys = Update.synchronizeDocument(doc, frontend, jStyle, fcursor.get(), syncOptions);
         } finally {
@@ -1014,17 +799,12 @@ public class OOBibBase {
     /// @param doc           Text document.
     /// @param fcursor       Used to synchronize document.
     /// @return CSLUpdateResult indicating success, no cited entries, or error
-    private CSLUpdateResult updateCSLBibliography(List<BibDatabase> databases, CitationStyle citationStyle, XTextDocument doc,
-                                       OOResult<FunctionalTextViewCursor, OOError> fcursor)
-            throws CreationException {
+    private CSLUpdateResult updateCSLBibliography(List<BibDatabase> databases, CitationStyle citationStyle, XTextDocument doc, OOResult<FunctionalTextViewCursor, OOError> fcursor) throws CreationException {
         try {
             UnoUndo.enterUndoContext(doc, "Create CSL bibliography");
 
             // Collect only cited entries from all databases
-            List<BibEntry> citedEntries = databases.stream()
-                                                   .flatMap(database -> database.getEntries().stream())
-                                                   .filter(cslCitationOOAdapter::isCitedEntry)
-                                                   .collect(Collectors.toCollection(ArrayList::new));
+            List<BibEntry> citedEntries = databases.stream().flatMap(database -> database.getEntries().stream()).filter(cslCitationOOAdapter::isCitedEntry).collect(Collectors.toCollection(ArrayList::new));
 
             // If no entries are cited, return info-level result
             if (citedEntries.isEmpty()) {

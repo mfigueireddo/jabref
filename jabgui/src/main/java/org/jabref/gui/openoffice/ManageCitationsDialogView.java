@@ -37,9 +37,7 @@ public class ManageCitationsDialogView extends BaseDialog<Void> {
     public ManageCitationsDialogView(OOBibBaseGUI ooBaseGUI) {
         this.ooBaseGUI = ooBaseGUI;
 
-        ViewLoader.view(this)
-                  .load()
-                  .setAsDialogPane(this);
+        ViewLoader.view(this).load().setAsDialogPane(this);
 
         setResultConverter(btn -> {
             if (btn == ButtonType.OK) {
@@ -65,8 +63,7 @@ public class ManageCitationsDialogView extends BaseDialog<Void> {
 
         citationsTableView.itemsProperty().bindBidirectional(viewModel.citationsProperty());
 
-        extraInfo.setOnEditCommit((CellEditEvent<CitationEntryViewModel, String> cell) ->
-                cell.getRowValue().setExtraInfo(cell.getNewValue()));
+        extraInfo.setOnEditCommit((CellEditEvent<CitationEntryViewModel, String> cell) -> cell.getRowValue().setExtraInfo(cell.getNewValue()));
         extraInfo.setCellFactory(TextFieldTableCell.forTableColumn());
     }
 
