@@ -125,7 +125,7 @@ public class OOBibBaseGUI {
 
     public void insertEntry(List<BibEntry> entries, BibDatabaseContext bibDatabaseContext, BibEntryTypesManager bibEntryTypesManager, OOStyle style, CitationType citationType, String pageInfo, Optional<Update.SyncOptions> syncOptions) {
 
-        final String errorTitle = "Could not insert citation";
+        final String errorTitle = Localization.lang("Could not insert citation");
         testDialog(errorTitle, logic.insertEntry(entries, bibDatabaseContext, bibEntryTypesManager, style, citationType, pageInfo, syncOptions));
     }
 
@@ -155,8 +155,8 @@ public class OOBibBaseGUI {
         }
 
         // Handle CSL-specific results
-        if (result.cslResult().isPresent()) {
-            switch (result.cslResult().get()) {
+        result.cslResult().ifPresent(csl -> {
+            switch (csl) {
                 case NO_CITED_ENTRIES ->
                         dialogService.showInformationDialogAndWait(Localization.lang("Bibliography"), Localization.lang("No cited entries found in the document."));
                 case ERROR ->
@@ -165,7 +165,7 @@ public class OOBibBaseGUI {
                     // Success - nothing to show
                 }
             }
-        }
+        });
     }
 
     /// GUI action for "Export cited"
@@ -177,11 +177,20 @@ public class OOBibBaseGUI {
 
         final String errorTitle = Localization.lang("Unable to generate new library");
 
-        OOResult<BibDatabase, OOError> result = logic.exportCitedHelper(databases, returnPartialResult);
+        OOResult<OOBibBase.ExportCitedResult, OOError> result = logic.exportCitedHelper(databases, returnPartialResult);
 
         if (testDialog(errorTitle, result.asVoidResult())) {
             return Optional.empty();
         }
-        return Optional.of(result.get());
+
+        OOBibBase.ExportCitedResult exportResult = result.get();
+        if (!exportResult.unresolvedKeys().isEmpty()) {
+            dialogService.showWarningDialogAndWait(
+                    Localization.lang("Unresolved citation keys"),
+                    Localization.lang("Your OpenOffice/LibreOffice document references at least %0 citation keys which could not be found in your current library. Some of these are %1.",
+                            String.valueOf(exportResult.unresolvedKeys().size()),
+                            String.join(", ", exportResult.unresolvedKeys())));
+        }
+        return Optional.of(exportResult.database());
     }
 }

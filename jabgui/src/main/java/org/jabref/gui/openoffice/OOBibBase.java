@@ -639,17 +639,15 @@ public class OOBibBase {
         }
     }
 
+    public record ExportCitedResult(BibDatabase database, List<String> unresolvedKeys) {
+    }
+
     /// GUI action for "Export cited"
     ///
     /// Does not refresh the bibliography.
     ///
     /// @param returnPartialResult If there are some unresolved keys, shall we return an otherwise nonempty result, or Optional.empty()?
-    /// Lógica pura: exporta as referências citadas para um novo BibDatabase.
-    ///
-    /// Não atualiza a bibliografia.
-    /// @param returnPartialResult Se houver chaves não resolvidas, retorna o
-    ///                            resultado parcial (true) ou erro (false).
-    public OOResult<BibDatabase, OOError> exportCitedHelper(List<BibDatabase> databases, boolean returnPartialResult) {
+    public OOResult<ExportCitedResult, OOError> exportCitedHelper(List<BibDatabase> databases, boolean returnPartialResult) {
 
         OOResult<XTextDocument, OOError> odoc = getXTextDocument();
         if (odoc.isError()) {
@@ -682,13 +680,13 @@ public class OOBibBase {
             if (!unresolvedKeys.isEmpty()) {
                 OOError unresolvedError = new OOError("", Localization.lang("Your OpenOffice/LibreOffice document references" + " at least %0 citation keys" + " which could not be found in your current library." + " Some of these are %1.", String.valueOf(unresolvedKeys.size()), String.join(", ", unresolvedKeys)));
                 if (returnPartialResult) {
-                    return OOResult.ok(result.newDatabase);
+                    return OOResult.ok(new ExportCitedResult(result.newDatabase, unresolvedKeys));
                 } else {
                     return OOResult.error(unresolvedError);
                 }
             }
 
-            return OOResult.ok(result.newDatabase);
+            return OOResult.ok(new ExportCitedResult(result.newDatabase, List.of()));
         } catch (NoDocumentException ex) {
             return OOResult.error(OOError.from(ex));
         } catch (DisposedException ex) {
