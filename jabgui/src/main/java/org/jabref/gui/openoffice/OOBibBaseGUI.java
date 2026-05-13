@@ -2,7 +2,6 @@ package org.jabref.gui.openoffice;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,27 +41,12 @@ public class OOBibBaseGUI {
         this.dialogService = dialogService;
     }
 
-    OOBibBaseGUI(OOBibBase logic, DialogService dialogService) {
-        this.logic = logic;
-        this.dialogService = dialogService;
-    }
-
     void showDialog(OOError err) {
         err.showErrorDialog(dialogService);
     }
 
-    boolean testDialog(OOVoidResult<OOError> res) {
-        return res.ifError(ex -> ex.showErrorDialog(dialogService)).isError();
-    }
-
     boolean testDialog(String errorTitle, OOVoidResult<OOError> res) {
         return res.ifError(e -> showDialog(e.setTitle(errorTitle))).isError();
-    }
-
-    @SafeVarargs
-    final boolean testDialog(String errorTitle, OOVoidResult<OOError>... results) {
-        List<OOVoidResult<OOError>> resultList = Arrays.asList(results);
-        return testDialog(logic.collectResults(errorTitle, resultList));
     }
 
     /// GUI action to select a Writer document to work with.
@@ -103,11 +87,6 @@ public class OOBibBaseGUI {
         return logic.getCurrentDocumentTitle();
     }
 
-    /// Close any open office connection, if none exists does nothing
-    public static void closeOfficeConnection() {
-        OOBibBaseConnect.closeOfficeConnection();
-    }
-
     public Optional<List<CitationEntry>> getCitationEntries() {
         final String errorTitle = Localization.lang("Problem collecting citations");
 
@@ -124,7 +103,6 @@ public class OOBibBaseGUI {
     }
 
     public void insertEntry(List<BibEntry> entries, BibDatabaseContext bibDatabaseContext, BibEntryTypesManager bibEntryTypesManager, OOStyle style, CitationType citationType, String pageInfo, Optional<Update.SyncOptions> syncOptions) {
-
         final String errorTitle = Localization.lang("Could not insert citation");
         testDialog(errorTitle, logic.insertEntry(entries, bibDatabaseContext, bibEntryTypesManager, style, citationType, pageInfo, syncOptions));
     }
@@ -174,7 +152,6 @@ public class OOBibBaseGUI {
     ///
     /// @param returnPartialResult If there are some unresolved keys, shall we return an otherwise nonempty result, or Optional.empty()?
     public Optional<BibDatabase> exportCitedHelper(List<BibDatabase> databases, boolean returnPartialResult) {
-
         final String errorTitle = Localization.lang("Unable to generate new library");
 
         OOResult<OOBibBase.ExportCitedResult, OOError> result = logic.exportCitedHelper(databases, returnPartialResult);
@@ -185,11 +162,7 @@ public class OOBibBaseGUI {
 
         OOBibBase.ExportCitedResult exportResult = result.get();
         if (!exportResult.unresolvedKeys().isEmpty()) {
-            dialogService.showWarningDialogAndWait(
-                    Localization.lang("Unresolved citation keys"),
-                    Localization.lang("Your OpenOffice/LibreOffice document references at least %0 citation keys which could not be found in your current library. Some of these are %1.",
-                            String.valueOf(exportResult.unresolvedKeys().size()),
-                            String.join(", ", exportResult.unresolvedKeys())));
+            dialogService.showWarningDialogAndWait(Localization.lang("Unresolved citation keys"), Localization.lang("Your OpenOffice/LibreOffice document references at least %0 citation keys which could not be found in your current library. Some of these are %1.", String.valueOf(exportResult.unresolvedKeys().size()), String.join(", ", exportResult.unresolvedKeys())));
         }
         return Optional.of(exportResult.database());
     }
