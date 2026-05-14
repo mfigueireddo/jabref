@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.jabref.logic.JabRefException;
 import org.jabref.logic.openoffice.frontend.OOFrontend;
 import org.jabref.logic.openoffice.frontend.UpdateCitationMarkers;
 import org.jabref.logic.openoffice.style.JStyle;
@@ -18,6 +19,7 @@ import org.jabref.model.openoffice.uno.NoDocumentException;
 import org.jabref.model.openoffice.uno.UnoScreenRefresh;
 import org.jabref.model.openoffice.uno.UnoTextRange;
 import org.jabref.model.openoffice.util.OOListUtil;
+import org.jabref.model.openoffice.util.OOResult;
 
 import com.sun.star.beans.IllegalTypeException;
 import com.sun.star.beans.NotRemoveableException;
@@ -37,58 +39,44 @@ public class EditMerge {
     }
 
     /// @return true if modified document
-    public static boolean mergeCitationGroups(XTextDocument doc, OOFrontend frontend, JStyle style)
-            throws
-            CreationException,
-            IllegalArgumentException,
-            IllegalTypeException,
-            NoDocumentException,
-            NotRemoveableException,
-            PropertyVetoException,
-            WrappedTargetException {
-
-        boolean madeModifications;
+    public static OOResult<Boolean, JabRefException> mergeCitationGroups(XTextDocument doc, OOFrontend frontend, JStyle style) {
 
         try {
-            UnoScreenRefresh.lockControllers(doc);
+            boolean madeModifications;
 
-            List<JoinableGroupData> joinableGroups = EditMerge.scan(doc, frontend);
+            try {
+                UnoScreenRefresh.lockControllers(doc);
 
-            for (JoinableGroupData joinableGroupData : joinableGroups) {
-                List<CitationGroup> groups = joinableGroupData.group;
+                List<JoinableGroupData> joinableGroups = EditMerge.scan(doc, frontend);
 
-                List<Citation> newCitations = groups.stream()
-                                                    .flatMap(group -> group.citationsInStorageOrder.stream())
-                                                    .collect(Collectors.toList());
+                for (JoinableGroupData joinableGroupData : joinableGroups) {
+                    List<CitationGroup> groups = joinableGroupData.group;
 
-                CitationType citationType = groups.getFirst().citationType;
-                List<Optional<OOText>> pageInfos = frontend.backend.combinePageInfos(groups);
+                    List<Citation> newCitations = groups.stream().flatMap(group -> group.citationsInStorageOrder.stream()).collect(Collectors.toList());
 
-                frontend.removeCitationGroups(groups, doc);
-                XTextCursor textCursor = joinableGroupData.groupCursor;
-                textCursor.setString(""); // Also remove the spaces between.
+                    CitationType citationType = groups.getFirst().citationType;
+                    List<Optional<OOText>> pageInfos = frontend.backend.combinePageInfos(groups);
 
-                List<String> citationKeys = OOListUtil.map(newCitations, Citation::getCitationKey);
+                    frontend.removeCitationGroups(groups, doc);
+                    XTextCursor textCursor = joinableGroupData.groupCursor;
+                    textCursor.setString(""); // Also remove the spaces between.
 
-                /* insertSpaceAfter: no, it is already there (or could be) */
-                boolean insertSpaceAfter = false;
-                UpdateCitationMarkers.createAndFillCitationGroup(frontend,
-                        doc,
-                        citationKeys,
-                        pageInfos,
-                        citationType,
-                        OOText.fromString("tmp"),
-                        textCursor,
-                        style,
-                        insertSpaceAfter);
+                    List<String> citationKeys = OOListUtil.map(newCitations, Citation::getCitationKey);
+
+                    /* insertSpaceAfter: no, it is already there (or could be) */
+                    boolean insertSpaceAfter = false;
+                    UpdateCitationMarkers.createAndFillCitationGroup(frontend, doc, citationKeys, pageInfos, citationType, OOText.fromString("tmp"), textCursor, style, insertSpaceAfter);
+                }
+
+                madeModifications = !joinableGroups.isEmpty();
+            } finally {
+                UnoScreenRefresh.unlockControllers(doc);
             }
 
-            madeModifications = !joinableGroups.isEmpty();
-        } finally {
-            UnoScreenRefresh.unlockControllers(doc);
+            return OOResult.ok(madeModifications);
+        } catch (CreationException | IllegalTypeException | NoDocumentException | NotRemoveableException | PropertyVetoException | WrappedTargetException e) {
+            return OOResult.error(new JabRefException(e.getMessage(), e));
         }
-
-        return madeModifications;
     }
 
     /// @param group       A list of consecutive citation groups only separated by spaces.
@@ -166,15 +154,7 @@ public class EditMerge {
             // Sanity check: the current range should start later than the previous.
             int textOrder = UnoTextRange.compareStarts(state.prevRange, currentRange);
             if (textOrder != -1) {
-                String msg =
-                        ("MergeCitationGroups:"
-                                + " \"%s\" supposed to be followed by \"%s\","
-                                + " but %s").formatted(
-                                state.prevRange.getString(),
-                                currentRange.getString(),
-                                (textOrder == 0
-                                 ? "they start at the same position"
-                                 : "the start of the latter precedes the start of the first"));
+                String msg = ("MergeCitationGroups:" + " \"%s\" supposed to be followed by \"%s\"," + " but %s").formatted(state.prevRange.getString(), currentRange.getString(), (textOrder == 0 ? "they start at the same position" : "the start of the latter precedes the start of the first"));
                 LOGGER.warn(msg);
                 return false;
             }
@@ -209,8 +189,7 @@ public class EditMerge {
          */
         XTextRange rangeStart = currentRange.getStart();
         boolean couldExpand = true;
-        XTextCursor thisCharCursor =
-                currentRange.getText().createTextCursorByRange(state.cursorBetween.getEnd());
+        XTextCursor thisCharCursor = currentRange.getText().createTextCursorByRange(state.cursorBetween.getEnd());
 
         while (couldExpand && (UnoTextRange.compareEnds(state.cursorBetween, rangeStart) < 0)) {
             //
@@ -257,8 +236,7 @@ public class EditMerge {
 
         // If new group, create currentGroupCursor
         if (isNewGroup) {
-            state.currentGroupCursor = currentRange.getText()
-                                                   .createTextCursorByRange(currentRange.getStart());
+            state.currentGroupCursor = currentRange.getText().createTextCursorByRange(currentRange.getStart());
         }
 
         // include currentRange in currentGroupCursor
@@ -275,10 +253,7 @@ public class EditMerge {
     }
 
     /// Scan the document for joinable groups. Return those found.
-    private static List<JoinableGroupData> scan(XTextDocument doc, OOFrontend frontend)
-            throws
-            NoDocumentException,
-            WrappedTargetException {
+    private static List<JoinableGroupData> scan(XTextDocument doc, OOFrontend frontend) throws NoDocumentException, WrappedTargetException {
         List<JoinableGroupData> result = new ArrayList<>();
 
         List<CitationGroup> groups = frontend.getCitationGroupsSortedWithinPartitions(doc, false /* mapFootnotesToFootnoteMarks */);
@@ -289,8 +264,7 @@ public class EditMerge {
         ScanState state = new ScanState();
 
         for (CitationGroup group : groups) {
-            XTextRange currentRange = frontend.getMarkRange(doc, group)
-                                              .orElseThrow(IllegalStateException::new);
+            XTextRange currentRange = frontend.getMarkRange(doc, group).orElseThrow(IllegalStateException::new);
 
             /*
              * Decide if we add group to the group. False when the group is empty.
