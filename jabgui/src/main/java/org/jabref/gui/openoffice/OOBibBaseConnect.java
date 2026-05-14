@@ -47,13 +47,19 @@ public class OOBibBaseConnect {
     /// Cleared (to null) when we discover we lost the connection.
     private XTextDocument xTextDocument;
 
-    public OOBibBaseConnect(Path loPath, DialogService dialogService) throws BootstrapException, CreationException, IOException, InterruptedException {
+    public OOBibBaseConnect(Path loPath, DialogService dialogService)
+            throws
+            BootstrapException,
+            CreationException, IOException, InterruptedException {
 
         this.dialogService = dialogService;
         this.xDesktop = simpleBootstrap(loPath);
     }
 
-    private XDesktop simpleBootstrap(Path loPath) throws CreationException, BootstrapException, IOException, InterruptedException {
+    private XDesktop simpleBootstrap(Path loPath)
+            throws
+            CreationException,
+            BootstrapException, IOException, InterruptedException {
 
         // Get the office component context:
         XComponentContext context = Bootstrap.bootstrap(loPath);
@@ -74,7 +80,9 @@ public class OOBibBaseConnect {
     public static void closeOfficeConnection() {
         try {
             // get the bridge factory from the local service manager
-            XBridgeFactory bridgeFactory = queryInterface(XBridgeFactory.class, Bootstrap.createSimpleServiceManager().createInstance("com.sun.star.bridge.BridgeFactory"));
+            XBridgeFactory bridgeFactory = queryInterface(XBridgeFactory.class,
+                    Bootstrap.createSimpleServiceManager()
+                             .createInstance("com.sun.star.bridge.BridgeFactory"));
 
             if (bridgeFactory != null) {
                 for (XBridge bridge : bridgeFactory.getExistingBridges()) {
@@ -87,7 +95,10 @@ public class OOBibBaseConnect {
         }
     }
 
-    private static List<XTextDocument> getTextDocuments(XDesktop desktop) throws NoSuchElementException, WrappedTargetException {
+    private static List<XTextDocument> getTextDocuments(XDesktop desktop)
+            throws
+            NoSuchElementException,
+            WrappedTargetException {
 
         List<XTextDocument> result = new ArrayList<>();
 
@@ -106,7 +117,8 @@ public class OOBibBaseConnect {
     /// Run a dialog allowing the user to choose among the documents in `list`.
     ///
     /// @return Null if no document was selected. Otherwise the document selected.
-    private static XTextDocument selectDocumentDialog(List<XTextDocument> list, DialogService dialogService) {
+    private static XTextDocument selectDocumentDialog(List<XTextDocument> list,
+                                                      DialogService dialogService) {
 
         class DocumentTitleViewModel {
 
@@ -128,14 +140,23 @@ public class OOBibBaseConnect {
             }
         }
 
-        List<DocumentTitleViewModel> viewModel = list.stream().map(DocumentTitleViewModel::new).collect(Collectors.toList());
+        List<DocumentTitleViewModel> viewModel = list.stream()
+                                                     .map(DocumentTitleViewModel::new)
+                                                     .collect(Collectors.toList());
 
         // This whole method is part of a background task when
         // auto-detecting instances, so we need to show dialog in FX
         // thread
-        Optional<DocumentTitleViewModel> selectedDocument = dialogService.showChoiceDialogAndWait(Localization.lang("Select document"), Localization.lang("Found documents:"), Localization.lang("Use selected document"), viewModel);
+        Optional<DocumentTitleViewModel> selectedDocument =
+                dialogService
+                        .showChoiceDialogAndWait(Localization.lang("Select document"),
+                                Localization.lang("Found documents:"),
+                                Localization.lang("Use selected document"),
+                                viewModel);
 
-        return selectedDocument.map(DocumentTitleViewModel::getXtextDocument).orElse(null);
+        return selectedDocument
+                .map(DocumentTitleViewModel::getXtextDocument)
+                .orElse(null);
     }
 
     /// Choose a document to work with.
@@ -156,7 +177,8 @@ public class OOBibBaseConnect {
             } else if ((textDocumentList.size() == 1) && autoSelectForSingle) {
                 selected = textDocumentList.getFirst(); // Get the only one
             } else { // Bring up a dialog
-                selected = OOBibBaseConnect.selectDocumentDialog(textDocumentList, this.dialogService);
+                selected = OOBibBaseConnect.selectDocumentDialog(textDocumentList,
+                        this.dialogService);
             }
 
             if (selected == null) {

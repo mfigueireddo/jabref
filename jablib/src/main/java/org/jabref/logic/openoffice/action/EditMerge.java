@@ -51,7 +51,9 @@ public class EditMerge {
                 for (JoinableGroupData joinableGroupData : joinableGroups) {
                     List<CitationGroup> groups = joinableGroupData.group;
 
-                    List<Citation> newCitations = groups.stream().flatMap(group -> group.citationsInStorageOrder.stream()).collect(Collectors.toList());
+                    List<Citation> newCitations = groups.stream()
+                                                        .flatMap(group -> group.citationsInStorageOrder.stream())
+                                                        .collect(Collectors.toList());
 
                     CitationType citationType = groups.getFirst().citationType;
                     List<Optional<OOText>> pageInfos = frontend.backend.combinePageInfos(groups);
@@ -64,7 +66,15 @@ public class EditMerge {
 
                     /* insertSpaceAfter: no, it is already there (or could be) */
                     boolean insertSpaceAfter = false;
-                    UpdateCitationMarkers.createAndFillCitationGroup(frontend, doc, citationKeys, pageInfos, citationType, OOText.fromString("tmp"), textCursor, style, insertSpaceAfter);
+                    UpdateCitationMarkers.createAndFillCitationGroup(frontend,
+                            doc,
+                            citationKeys,
+                            pageInfos,
+                            citationType,
+                            OOText.fromString("tmp"),
+                            textCursor,
+                            style,
+                            insertSpaceAfter);
                 }
 
                 madeModifications = !joinableGroups.isEmpty();
@@ -153,7 +163,15 @@ public class EditMerge {
             // Sanity check: the current range should start later than the previous.
             int textOrder = UnoTextRange.compareStarts(state.prevRange, currentRange);
             if (textOrder != -1) {
-                String msg = ("MergeCitationGroups:" + " \"%s\" supposed to be followed by \"%s\"," + " but %s").formatted(state.prevRange.getString(), currentRange.getString(), (textOrder == 0 ? "they start at the same position" : "the start of the latter precedes the start of the first"));
+                String msg =
+                        ("MergeCitationGroups:"
+                                + " \"%s\" supposed to be followed by \"%s\","
+                                + " but %s").formatted(
+                                state.prevRange.getString(),
+                                currentRange.getString(),
+                                (textOrder == 0
+                                 ? "they start at the same position"
+                                 : "the start of the latter precedes the start of the first"));
                 LOGGER.warn(msg);
                 return false;
             }
@@ -188,7 +206,8 @@ public class EditMerge {
          */
         XTextRange rangeStart = currentRange.getStart();
         boolean couldExpand = true;
-        XTextCursor thisCharCursor = currentRange.getText().createTextCursorByRange(state.cursorBetween.getEnd());
+        XTextCursor thisCharCursor =
+                currentRange.getText().createTextCursorByRange(state.cursorBetween.getEnd());
 
         while (couldExpand && (UnoTextRange.compareEnds(state.cursorBetween, rangeStart) < 0)) {
             //
@@ -235,7 +254,8 @@ public class EditMerge {
 
         // If new group, create currentGroupCursor
         if (isNewGroup) {
-            state.currentGroupCursor = currentRange.getText().createTextCursorByRange(currentRange.getStart());
+            state.currentGroupCursor = currentRange.getText()
+                                                   .createTextCursorByRange(currentRange.getStart());
         }
 
         // include currentRange in currentGroupCursor
@@ -252,7 +272,10 @@ public class EditMerge {
     }
 
     /// Scan the document for joinable groups. Return those found.
-    private static List<JoinableGroupData> scan(XTextDocument doc, OOFrontend frontend) throws NoDocumentException, WrappedTargetException {
+    private static List<JoinableGroupData> scan(XTextDocument doc, OOFrontend frontend)
+            throws
+            NoDocumentException,
+            WrappedTargetException {
         List<JoinableGroupData> result = new ArrayList<>();
 
         List<CitationGroup> groups = frontend.getCitationGroupsSortedWithinPartitions(doc, false /* mapFootnotesToFootnoteMarks */);
@@ -263,7 +286,8 @@ public class EditMerge {
         ScanState state = new ScanState();
 
         for (CitationGroup group : groups) {
-            XTextRange currentRange = frontend.getMarkRange(doc, group).orElseThrow(IllegalStateException::new);
+            XTextRange currentRange = frontend.getMarkRange(doc, group)
+                                              .orElseThrow(IllegalStateException::new);
 
             /*
              * Decide if we add group to the group. False when the group is empty.

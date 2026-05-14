@@ -65,14 +65,18 @@ public class ExportCited {
                     entriesToInsert.add(clonedEntry);
 
                     // Check if the cloned entry has a cross-reference field
-                    clonedEntry.getField(StandardField.CROSSREF).ifPresent(crossReference -> {
-                        boolean isNew = !seen.contains(crossReference);
-                        if (isNew) {
-                            // Add it if it is in the current library
-                            loopDatabase.getEntryByCitationKey(crossReference).ifPresent(entriesToInsert::add);
-                            seen.add(crossReference);
-                        }
-                    });
+                    clonedEntry
+                            .getField(StandardField.CROSSREF)
+                            .ifPresent(crossReference -> {
+                                boolean isNew = !seen.contains(crossReference);
+                                if (isNew) {
+                                    // Add it if it is in the current library
+                                    loopDatabase
+                                            .getEntryByCitationKey(crossReference)
+                                            .ifPresent(entriesToInsert::add);
+                                    seen.add(crossReference);
+                                }
+                            });
                 }
             }
 

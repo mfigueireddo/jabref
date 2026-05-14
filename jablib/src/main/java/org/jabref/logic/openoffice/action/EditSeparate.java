@@ -30,7 +30,10 @@ public class EditSeparate {
     private EditSeparate() {
     }
 
-    public static OOResult<Boolean, JabRefException> separateCitations(XTextDocument doc, OOFrontend frontend, List<BibDatabase> databases, JStyle style) {
+    public static OOResult<Boolean, JabRefException> separateCitations(XTextDocument doc,
+                                                                        OOFrontend frontend,
+                                                                        List<BibDatabase> databases,
+                                                                        JStyle style) {
         try {
             boolean madeModifications = false;
 
@@ -47,7 +50,9 @@ public class EditSeparate {
                 UnoScreenRefresh.lockControllers(doc);
 
                 for (CitationGroup group : groups) {
-                    XTextRange range1 = frontend.getMarkRange(doc, group).orElseThrow(IllegalStateException::new);
+                    XTextRange range1 = frontend
+                            .getMarkRange(doc, group)
+                            .orElseThrow(IllegalStateException::new);
                     XTextCursor textCursor = range1.getText().createTextCursorByRange(range1);
 
                     List<Citation> citations = group.citationsInStorageOrder;
@@ -64,7 +69,15 @@ public class EditSeparate {
                         boolean insertSpaceAfter = i != last;
                         Citation citation = citations.get(i);
 
-                        UpdateCitationMarkers.createAndFillCitationGroup(frontend, doc, List.of(citation.citationKey), List.of(citation.getPageInfo()), group.citationType, OOText.fromString(citation.citationKey), textCursor, style, insertSpaceAfter);
+                        UpdateCitationMarkers.createAndFillCitationGroup(frontend,
+                                doc,
+                                List.of(citation.citationKey),
+                                List.of(citation.getPageInfo()),
+                                group.citationType,
+                                OOText.fromString(citation.citationKey),
+                                textCursor,
+                                style,
+                                insertSpaceAfter);
 
                         textCursor.collapseToEnd();
                     }

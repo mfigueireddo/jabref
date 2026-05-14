@@ -50,7 +50,14 @@ public class EditInsert {
 
     /// @param cursor   Where to insert.
     /// @param pageInfo A single pageInfo for a list of entries. This is what we get from the GUI.
-    public static OOVoidResult<JabRefException> insertCitationGroup(XTextDocument doc, OOFrontend frontend, XTextCursor cursor, List<BibEntry> entries, BibDatabase database, JStyle style, CitationType citationType, String pageInfo) {
+    public static OOVoidResult<JabRefException> insertCitationGroup(XTextDocument doc,
+                                                                    OOFrontend frontend,
+                                                                    XTextCursor cursor,
+                                                                    List<BibEntry> entries,
+                                                                    BibDatabase database,
+                                                                    JStyle style,
+                                                                    CitationType citationType,
+                                                                    String pageInfo) {
         List<String> citationKeys = OOListUtil.map(entries, EditInsert::insertEntryGetCitationKey);
 
         final int totalEntries = entries.size();
@@ -69,7 +76,9 @@ public class EditInsert {
         if (style.isNumberEntries()) {
             citeText = OOText.fromString("[-]"); // A dash only. Only refresh later.
         } else {
-            citeText = style.createCitationMarker(citations, citationType.inParenthesis(), NonUniqueCitationMarker.FORGIVEN);
+            citeText = style.createCitationMarker(citations,
+                    citationType.inParenthesis(),
+                    NonUniqueCitationMarker.FORGIVEN);
         }
 
         if (StringUtil.isBlank(OOText.toString(citeText))) {
@@ -78,7 +87,15 @@ public class EditInsert {
 
         try {
             UnoScreenRefresh.lockControllers(doc);
-            UpdateCitationMarkers.createAndFillCitationGroup(frontend, doc, citationKeys, pageInfos, citationType, citeText, cursor, style, true /* insertSpaceAfter */);
+            UpdateCitationMarkers.createAndFillCitationGroup(frontend,
+                    doc,
+                    citationKeys,
+                    pageInfos,
+                    citationType,
+                    citeText,
+                    cursor,
+                    style,
+                    true /* insertSpaceAfter */);
             return OOVoidResult.ok();
         } catch (NoDocumentException | NotRemoveableException | WrappedTargetException | PropertyVetoException | CreationException | IllegalTypeException e) {
             return OOVoidResult.error(new JabRefException(e.getMessage(), e));
