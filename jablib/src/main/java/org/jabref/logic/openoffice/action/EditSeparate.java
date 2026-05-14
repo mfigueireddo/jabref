@@ -31,7 +31,6 @@ public class EditSeparate {
     }
 
     public static OOResult<Boolean, JabRefException> separateCitations(XTextDocument doc, OOFrontend frontend, List<BibDatabase> databases, JStyle style) {
-
         try {
             boolean madeModifications = false;
 

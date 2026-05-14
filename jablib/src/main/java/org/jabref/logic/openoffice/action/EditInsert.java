@@ -51,7 +51,6 @@ public class EditInsert {
     /// @param cursor   Where to insert.
     /// @param pageInfo A single pageInfo for a list of entries. This is what we get from the GUI.
     public static OOVoidResult<JabRefException> insertCitationGroup(XTextDocument doc, OOFrontend frontend, XTextCursor cursor, List<BibEntry> entries, BibDatabase database, JStyle style, CitationType citationType, String pageInfo) {
-
         List<String> citationKeys = OOListUtil.map(entries, EditInsert::insertEntryGetCitationKey);
 
         final int totalEntries = entries.size();
