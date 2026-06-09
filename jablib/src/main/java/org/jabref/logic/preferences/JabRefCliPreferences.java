@@ -1928,6 +1928,7 @@ public class JabRefCliPreferences implements CliPreferences {
                 CleanupPreferences.CleanupStep.CLEAN_UP_UPGRADE_EXTERNAL_LINKS,
                 CleanupPreferences.CleanupStep.MOVE_PDF,
                 CleanupPreferences.CleanupStep.RENAME_PDF_ONLY_RELATIVE_PATHS,
+                CleanupPreferences.CleanupStep.RENAME_PDF_ONLY_PDF_FILES,
                 CleanupPreferences.CleanupStep.CONVERT_TO_BIBLATEX,
                 CleanupPreferences.CleanupStep.CONVERT_TO_BIBTEX,
                 CleanupPreferences.CleanupStep.CONVERT_MSC_CODES,

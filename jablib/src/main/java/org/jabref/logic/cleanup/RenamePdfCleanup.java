@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 
 import org.jabref.logic.FilePreferences;
 import org.jabref.logic.externalfiles.LinkedFileHandler;
+import org.jabref.logic.util.io.FileUtil;
 import org.jabref.model.FieldChange;
 import org.jabref.model.database.BibDatabaseContext;
 import org.jabref.model.entry.BibEntry;
@@ -22,15 +23,26 @@ import org.slf4j.LoggerFactory;
 public class RenamePdfCleanup implements CleanupJob {
     private static final Logger LOGGER = LoggerFactory.getLogger(RenamePdfCleanup.class);
 
+    private static final String PDF_EXTENSION = "pdf";
+
     private final Supplier<BibDatabaseContext> databaseContext;
     private final boolean onlyRelativePaths;
+    private final boolean onlyPdfFiles;
     private final FilePreferences filePreferences;
 
     public RenamePdfCleanup(boolean onlyRelativePaths,
                             @NonNull Supplier<BibDatabaseContext> databaseContext,
                             FilePreferences filePreferences) {
+        this(onlyRelativePaths, false, databaseContext, filePreferences);
+    }
+
+    public RenamePdfCleanup(boolean onlyRelativePaths,
+                            boolean onlyPdfFiles,
+                            @NonNull Supplier<BibDatabaseContext> databaseContext,
+                            FilePreferences filePreferences) {
         this.databaseContext = databaseContext;
         this.onlyRelativePaths = onlyRelativePaths;
+        this.onlyPdfFiles = onlyPdfFiles;
         this.filePreferences = filePreferences;
     }
 
@@ -47,6 +59,10 @@ public class RenamePdfCleanup implements CleanupJob {
         boolean changed = false;
         for (LinkedFile file : files) {
             if (onlyRelativePaths && Path.of(file.getLink()).isAbsolute()) {
+                continue;
+            }
+
+            if (onlyPdfFiles && !isPdf(file)) {
                 continue;
             }
 
@@ -69,5 +85,12 @@ public class RenamePdfCleanup implements CleanupJob {
         }
 
         return List.of();
+    }
+
+    /// Determines whether the linked file is a PDF, based on its file extension.
+    private static boolean isPdf(LinkedFile file) {
+        return FileUtil.getFileExtension(file.getLink())
+                       .map(extension -> extension.equalsIgnoreCase(PDF_EXTENSION))
+                       .orElse(false);
     }
 }

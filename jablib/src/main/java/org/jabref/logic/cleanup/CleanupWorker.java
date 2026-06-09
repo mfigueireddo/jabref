@@ -91,6 +91,8 @@ public class CleanupWorker {
                     new RenamePdfCleanup(false, () -> databaseContext, filePreferences);
             case RENAME_PDF_ONLY_RELATIVE_PATHS ->
                     new RenamePdfCleanup(true, () -> databaseContext, filePreferences);
+            case RENAME_PDF_ONLY_PDF_FILES ->
+                    new RenamePdfCleanup(false, true, () -> databaseContext, filePreferences);
             case CLEAN_UP_UPGRADE_EXTERNAL_LINKS ->
                     new UpgradePdfPsToFileCleanup();
             case CLEAN_UP_DELETED_LINKED_FILES ->
