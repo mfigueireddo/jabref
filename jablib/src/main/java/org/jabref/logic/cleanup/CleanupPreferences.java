@@ -75,6 +75,9 @@ public class CleanupPreferences {
         RENAME_PDF,
         RENAME_PDF_ONLY_RELATIVE_PATHS,
         RENAME_PDF_ONLY_PDF_FILES,
+        // Orthogonal modifier: re-appends a user-added suffix (such as "-fig6") when renaming, instead of
+        // collapsing the file name onto the plain pattern. Combines with any of the RENAME_PDF* steps above.
+        RENAME_PDF_PRESERVE_SUFFIX,
         MOVE_PDF,
         FIX_FILE_LINKS,
         CLEAN_UP_DELETED_LINKED_FILES,

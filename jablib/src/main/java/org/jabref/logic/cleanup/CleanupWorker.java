@@ -65,9 +65,15 @@ public class CleanupWorker {
     private List<CleanupJob> determineCleanupActions(CleanupPreferences preset) {
         List<CleanupJob> jobs = new ArrayList<>();
 
+        // "Preserve suffix" is not a standalone job but an orthogonal modifier of the rename jobs.
+        boolean preserveCustomSuffix = preset.isActive(CleanupPreferences.CleanupStep.RENAME_PDF_PRESERVE_SUFFIX);
+
         // Add active jobs from preset panel
         for (CleanupPreferences.CleanupStep action : preset.getActiveJobs()) {
-            jobs.add(toJob(action));
+            if (action == CleanupPreferences.CleanupStep.RENAME_PDF_PRESERVE_SUFFIX) {
+                continue;
+            }
+            jobs.add(toJob(action, preserveCustomSuffix));
         }
 
         if (preset.getFieldFormatterCleanups().isEnabled()) {
@@ -77,7 +83,7 @@ public class CleanupWorker {
         return jobs;
     }
 
-    private CleanupJob toJob(CleanupPreferences.CleanupStep action) {
+    private CleanupJob toJob(CleanupPreferences.CleanupStep action, boolean preserveCustomSuffix) {
         return switch (action) {
             case CLEAN_UP_DOI ->
                     new DoiCleanup();
@@ -88,11 +94,11 @@ public class CleanupWorker {
             case MAKE_PATHS_RELATIVE ->
                     new RelativePathsCleanup(databaseContext, filePreferences);
             case RENAME_PDF ->
-                    new RenamePdfCleanup(false, () -> databaseContext, filePreferences);
+                    new RenamePdfCleanup(false, false, preserveCustomSuffix, () -> databaseContext, filePreferences);
             case RENAME_PDF_ONLY_RELATIVE_PATHS ->
-                    new RenamePdfCleanup(true, () -> databaseContext, filePreferences);
+                    new RenamePdfCleanup(true, false, preserveCustomSuffix, () -> databaseContext, filePreferences);
             case RENAME_PDF_ONLY_PDF_FILES ->
-                    new RenamePdfCleanup(false, true, () -> databaseContext, filePreferences);
+                    new RenamePdfCleanup(false, true, preserveCustomSuffix, () -> databaseContext, filePreferences);
             case CLEAN_UP_UPGRADE_EXTERNAL_LINKS ->
                     new UpgradePdfPsToFileCleanup();
             case CLEAN_UP_DELETED_LINKED_FILES ->
